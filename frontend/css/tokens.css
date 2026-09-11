@@ -1,0 +1,39 @@
+:root {
+  --navy: #14213d;
+  --navy-deep: #0d1730;
+  --gold: #c9a227;
+  --gold-soft: #e4c869;
+  --paper: #faf8f4;
+  --ink: #1f2430;
+  --slate: #6b7280;
+  --slate-light: #e4e2db;
+  --green: #2f6f4e;
+  --amber: #b5722d;
+  --red: #a13d3d;
+
+  --font-display: "Source Serif 4", "Georgia", serif;
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --radius-s: 3px;
+  --radius-m: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}

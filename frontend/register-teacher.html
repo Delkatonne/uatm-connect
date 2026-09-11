@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Créer un compte enseignant — UATM Connect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/login.css" />
+<link rel="stylesheet" href="css/register.css" />
+</head>
+<body>
+
+<div class="register-screen">
+  <div class="register-card">
+
+    <div class="register-header">
+      <div class="seal">UC</div>
+      <span>UATM Connect</span>
+    </div>
+
+    <form id="registerForm" novalidate>
+      <h2>Créer un compte enseignant</h2>
+      <p class="subtitle">Votre compte sera actif après vérification de votre justificatif par l'administration (24h maximum).</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+
+      <div class="form-block">
+        <h3>Informations personnelles</h3>
+        <div class="field">
+          <label for="nomComplet">Nom complet</label>
+          <input type="text" id="nomComplet" required />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="email">Adresse e-mail</label>
+            <input type="email" id="email" required />
+          </div>
+          <div class="field">
+            <label for="telephone">Téléphone</label>
+            <input type="tel" id="telephone" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="motDePasse">Mot de passe</label>
+            <input type="password" id="motDePasse" required />
+          </div>
+          <div class="field">
+            <label for="confirmation">Confirmer le mot de passe</label>
+            <input type="password" id="confirmation" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <h3>Informations professionnelles</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="departement">Filière / Département</label>
+            <select id="departement" required>
+              <option value="">Sélectionner…</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fonction">Fonction</label>
+            <input type="text" id="fonction" placeholder="Ex : Enseignant vacataire" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="matieres">Matière(s) enseignée(s)</label>
+          <input type="text" id="matieres" placeholder="Ex : Programmation, Base de données" required />
+        </div>
+        <div class="hint" style="margin-top:-8px; margin-bottom:4px;">
+          L'administration confirmera vos matières et vos classes après validation de votre compte.
+        </div>
+      </div>
+
+      <div class="form-block">
+        <h3>Justificatif</h3>
+        <div class="file-field">
+          <label for="justificatif">Document prouvant votre statut d'enseignant à GASA Formation</label>
+          <input type="file" id="justificatif" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required />
+          <div class="hint">Formats acceptés : PDF, JPG, PNG, DOC — 20 Mo maximum.</div>
+          <div class="file-name" id="fileName"></div>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Envoyer ma demande d'inscription</button>
+
+      <div class="form-footer" style="justify-content:center; margin-top:18px;">
+        <a href="login.html">Déjà inscrit ? Se connecter</a>
+      </div>
+    </form>
+
+    <div class="success-panel" id="successPanel">
+      <div class="seal">✓</div>
+      <h2>Demande envoyée</h2>
+      <p>Votre inscription a bien été reçue. L'administration va vérifier votre justificatif et valider votre compte sous 24 heures. Vous recevrez une notification par e-mail.</p>
+      <a class="back-link" href="login.html">Retour à la connexion</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/register-teacher.js"></script>
+</body>
+</html>

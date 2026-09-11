@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mon espace — UATM Connect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="seal-row">
+      <div class="seal">UC</div>
+      <span>UATM Connect</span>
+    </div>
+    <nav>
+      <a href="#accueil" class="active" data-section="accueil">Accueil</a>
+      <a href="#cours" data-section="cours">Mes cours</a>
+      <a href="#devoirs" data-section="devoirs">Mes devoirs</a>
+      <a href="#examens" data-section="examens">Mes examens</a>
+      <a href="#programme" data-section="programme">Mon programme</a>
+      <a href="#documents" data-section="documents">Documents</a>
+      <a href="#notifications" data-section="notifications">Notifications</a>
+      <a href="#profil" data-section="profil">Mon profil</a>
+    </nav>
+    <div class="sidebar-footer">GASA Formation<br />Espace étudiant</div>
+  </aside>
+
+  <main class="main">
+    <h1 class="greeting" id="greeting">Bonjour</h1>
+    <div class="identity-line" id="identityLine"></div>
+
+    <section class="section" id="cours">
+      <div class="section-header">
+        <h3>Mes cours récents</h3>
+        <span class="count" id="coursCount"></span>
+      </div>
+      <div id="coursList"></div>
+    </section>
+
+    <section class="section" id="devoirs">
+      <div class="section-header">
+        <h3>Mes devoirs</h3>
+        <span class="count" id="devoirsCount"></span>
+      </div>
+      <div id="devoirsList"></div>
+    </section>
+
+    <section class="section" id="examens">
+      <div class="section-header">
+        <h3>Mes examens</h3>
+        <span class="count" id="examensCount"></span>
+      </div>
+      <div id="examensList"></div>
+    </section>
+
+    <section class="section" id="notifications">
+      <div class="section-header">
+        <h3>Notifications</h3>
+        <span class="count" id="notifCount"></span>
+      </div>
+      <div id="notifList"></div>
+    </section>
+  </main>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/student-dashboard.js"></script>
+</body>
+</html>
