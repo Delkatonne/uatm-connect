@@ -54,10 +54,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
-  font-size: 20px;
-  letter-spacing: 0.02em;
-  color: var(--gold-soft);
+  background: #fff;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.seal img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
 }
 
 .login-brand h1 {
