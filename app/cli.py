@@ -42,6 +42,15 @@ def create_admin(nom, email, mot_de_passe):
 def register_cli(app):
     app.cli.add_command(create_admin)
     app.cli.add_command(seed_academic)
+    app.cli.add_command(init_db)
+
+
+@click.command("init-db")
+@with_appcontext
+def init_db():
+    """Crée les tables directement depuis les modèles (sans passer par Alembic)."""
+    db.create_all()
+    click.echo("Tables créées (ou déjà à jour).")
 
 
 @click.command("seed-academic")
