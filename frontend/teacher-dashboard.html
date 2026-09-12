@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mon espace — UATM Connect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/dashboard.css" />
+<link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="seal-row">
+      <div class="seal"><img src="../medias/logo-gasa.jpeg" alt="Logo GASA Formation" /></div>
+      <span>UATM Connect</span>
+    </div>
+    <nav>
+      <a href="#" class="tab-link active" data-tab="accueil">Accueil</a>
+      <a href="#" class="tab-link" data-tab="publier">Publier un document</a>
+      <a href="#" class="tab-link" data-tab="publications">Mes publications</a>
+      <a href="#" class="tab-link" data-tab="examens">Examens</a>
+      <a href="#" class="tab-link" data-tab="emploi">Emploi du temps</a>
+      <a href="#" class="tab-link" data-tab="notifications">Notifications</a>
+      <a href="#" class="tab-link" data-tab="documents-admin">Documents administratifs</a>
+      <a href="#" class="tab-link" data-tab="profil">Mon profil</a>
+    </nav>
+    <div class="sidebar-footer">GASA Formation<br />Espace enseignant</div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Accueil -->
+    <section class="tab-panel active" id="tab-accueil">
+      <h1 class="greeting" id="greeting">Bonjour</h1>
+      <div class="identity-line" id="identityLine"></div>
+
+      <div class="section">
+        <div class="section-header"><h3>Mes classes</h3><span class="count" id="classesCount"></span></div>
+        <div id="classesList"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><h3>Mes matières</h3><span class="count" id="subjectsCount"></span></div>
+        <div id="subjectsList"></div>
+      </div>
+    </section>
+
+    <!-- Publier un document -->
+    <section class="tab-panel" id="tab-publier">
+      <h1 class="admin-title">Publier un document</h1>
+      <form class="inline-form" id="publishForm" enctype="multipart/form-data" style="flex-direction:column; align-items:stretch;">
+        <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; width:100%;">
+          <div class="field"><label>Classe</label><select id="docClasse" required></select></div>
+          <div class="field"><label>Matière</label><select id="docSubject" required></select></div>
+        </div>
+        <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; width:100%;">
+          <div class="field"><label>Type de document</label>
+            <select id="docType" required>
+              <option value="cours">Cours</option>
+              <option value="exercice">Exercice</option>
+              <option value="devoir">Devoir</option>
+              <option value="td">TD</option>
+              <option value="correction">Correction</option>
+              <option value="examen">Document d'examen</option>
+              <option value="complementaire">Document complémentaire</option>
+            </select>
+          </div>
+          <div class="field"><label>Titre</label><input type="text" id="docTitre" required /></div>
+        </div>
+        <div class="field" style="width:100%;">
+          <label>Description</label>
+          <input type="text" id="docDescription" placeholder="Optionnel" />
+        </div>
+        <div class="file-field" style="width:100%;">
+          <label for="docFichier">Fichier</label>
+          <input type="file" id="docFichier" required />
+          <div class="file-name" id="docFileName"></div>
+        </div>
+        <button type="submit" style="align-self:flex-start;">Publier à la classe</button>
+      </form>
+
+      <h1 class="admin-title" style="margin-top:40px;">Publier un examen</h1>
+      <form class="inline-form" id="examForm">
+        <div class="field"><label>Classe</label><select id="examClasse" required></select></div>
+        <div class="field"><label>Matière</label><select id="examSubject" required></select></div>
+        <div class="field"><label>Titre</label><input type="text" id="examTitre" required /></div>
+        <div class="field"><label>Date</label><input type="date" id="examDate" required /></div>
+        <div class="field"><label>Heure</label><input type="time" id="examHeure" required /></div>
+        <div class="field"><label>Salle</label><input type="text" id="examSalle" /></div>
+        <button type="submit">Publier</button>
+      </form>
+    </section>
+
+    <!-- Mes publications -->
+    <section class="tab-panel" id="tab-publications">
+      <h1 class="admin-title">Mes publications</h1>
+      <div id="publicationsList"></div>
+    </section>
+
+    <!-- Examens -->
+    <section class="tab-panel" id="tab-examens">
+      <h1 class="admin-title">Examens à venir</h1>
+      <div id="examensList"></div>
+    </section>
+
+    <!-- Emploi du temps -->
+    <section class="tab-panel" id="tab-emploi">
+      <h1 class="admin-title">Mon emploi du temps</h1>
+      <div class="field" style="max-width:320px; margin-bottom:20px;">
+        <label>Semestre</label>
+        <select id="scheduleSemester"></select>
+      </div>
+      <table class="simple-table" id="scheduleTable">
+        <thead><tr><th>Jour</th><th>Horaire</th><th>Matière</th><th>Classe</th><th>Salle</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Notifications -->
+    <section class="tab-panel" id="tab-notifications">
+      <h1 class="admin-title">Notifications</h1>
+      <div id="notifList"></div>
+    </section>
+
+    <!-- Documents administratifs -->
+    <section class="tab-panel" id="tab-documents-admin">
+      <h1 class="admin-title">Documents administratifs</h1>
+      <div id="adminDocsList"></div>
+    </section>
+
+    <!-- Mon profil -->
+    <section class="tab-panel" id="tab-profil">
+      <h1 class="admin-title">Mon profil</h1>
+      <p class="entry-meta" id="profilInfo" style="margin-bottom:16px;"></p>
+      <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:12px;">
+        <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Téléphone</label><input type="tel" id="profilTelephone" style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+        <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Photo de profil</label><input type="file" id="profilPhoto" accept="image/*" /></div>
+      </div>
+      <button type="button" id="profilSaveBtn" style="padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px; margin-bottom:32px;">Enregistrer</button>
+
+      <h1 class="admin-title" style="font-size:18px;">Changer le mot de passe</h1>
+      <form id="passwordForm">
+        <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:12px;">
+          <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Mot de passe actuel</label><input type="password" id="pwdActuel" required style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Nouveau mot de passe</label><input type="password" id="pwdNouveau" required style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Confirmer</label><input type="password" id="pwdConfirm" required style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+        </div>
+        <button type="submit" style="padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Mettre à jour</button>
+      </form>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/teacher-dashboard.js"></script>
+</body>
+</html>

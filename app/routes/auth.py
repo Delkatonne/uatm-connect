@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
@@ -59,7 +59,30 @@ def login():
     return jsonify({"access_token": access_token, "user": user.to_dict()}), 200
 
 
-@auth_bp.post("/register/student")
+@auth_bp.post("/change-password")
+@jwt_required()
+def change_password():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "Compte introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    required = ["mot_de_passe_actuel", "nouveau_mot_de_passe", "confirmation"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if not user.check_password(data["mot_de_passe_actuel"]):
+        return jsonify({"message": "Mot de passe actuel incorrect."}), 401
+
+    if data["nouveau_mot_de_passe"] != data["confirmation"]:
+        return jsonify({"message": "Les mots de passe ne correspondent pas."}), 400
+
+    user.set_password(data["nouveau_mot_de_passe"])
+    db.session.commit()
+
+    return jsonify({"message": "Mot de passe mis à jour."})
 def register_student():
     """
     Inscription étudiant (multipart/form-data) :

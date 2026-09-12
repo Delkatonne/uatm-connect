@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/tokens.css" />
 <link rel="stylesheet" href="css/dashboard.css" />
+<link rel="stylesheet" href="css/admin.css" />
 </head>
 <body>
 
@@ -66,9 +67,39 @@
       </div>
       <div id="notifList"></div>
     </section>
+
+    <section class="section" id="documents">
+      <div class="section-header">
+        <h3>Documents administratifs</h3>
+        <span class="count" id="adminDocsCount"></span>
+      </div>
+      <div id="adminDocsList"></div>
+    </section>
+
+    <section class="section" id="profil">
+      <div class="section-header"><h3>Mon profil</h3></div>
+      <p class="entry-meta" id="profilInfo" style="margin-bottom:16px;"></p>
+      <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:12px;">
+        <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Téléphone</label><input type="tel" id="profilTelephone" style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+        <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Photo de profil</label><input type="file" id="profilPhoto" accept="image/*" /></div>
+      </div>
+      <button type="button" id="profilSaveBtn" style="padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px; margin-bottom:32px;">Enregistrer</button>
+
+      <div class="section-header"><h3>Changer le mot de passe</h3></div>
+      <form id="passwordForm">
+        <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:12px;">
+          <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Mot de passe actuel</label><input type="password" id="pwdActuel" required style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Nouveau mot de passe</label><input type="password" id="pwdNouveau" required style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label style="display:block; font-size:13px; margin-bottom:6px;">Confirmer</label><input type="password" id="pwdConfirm" required style="width:100%; padding:11px 13px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+        </div>
+        <button type="submit" style="padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Mettre à jour</button>
+      </form>
+    </section>
   </main>
 
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script src="js/config.js"></script>
 <script src="js/student-dashboard.js"></script>

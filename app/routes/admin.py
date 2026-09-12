@@ -1,10 +1,344 @@
-from flask import Blueprint, jsonify, request
+import os
+from datetime import datetime
+
+from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from werkzeug.utils import secure_filename
 
 from app.extensions import db
-from app.models import Program, StudyYear, TeachingUnit, Subject
+from app.models import (
+    User,
+    RoleEnum,
+    AccountStatusEnum,
+    Program,
+    ProgramOption,
+    StudyYear,
+    TeachingUnit,
+    Subject,
+    Semester,
+    Student,
+    Teacher,
+    ClassGroup,
+    TeacherAssignment,
+    ScheduleSlot,
+    Notification,
+    VerificationDocument,
+    AcademicProgram,
+)
+from app.models.schedule import JOURS_SEMAINE
 from app.utils.decorators import role_required
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
+
+
+# ---------- Tableau de bord ----------
+
+@admin_bp.get("/stats")
+@role_required("admin")
+def stats():
+    return jsonify(
+        {
+            "etudiants": Student.query.count(),
+            "enseignants": Teacher.query.count(),
+            "comptes_en_attente": User.query.filter_by(
+                statut=AccountStatusEnum.EN_ATTENTE
+            ).count(),
+            "comptes_valides": User.query.filter_by(
+                statut=AccountStatusEnum.VALIDE
+            ).count(),
+            "comptes_refuses": User.query.filter_by(
+                statut=AccountStatusEnum.REFUSE
+            ).count(),
+            "filieres": Program.query.count(),
+            "options": ProgramOption.query.count(),
+            "classes": ClassGroup.query.count(),
+            "matieres": Subject.query.count(),
+        }
+    )
+
+
+# ---------- Validation des comptes ----------
+
+@admin_bp.get("/accounts")
+@role_required("admin")
+def list_accounts():
+    statut = request.args.get("statut")  # en_attente_de_validation, valide, refuse, piece_a_fournir
+    role = request.args.get("role")  # etudiant, enseignant
+
+    query = User.query.filter(User.role != RoleEnum.ADMIN)
+    if statut:
+        query = query.filter_by(statut=AccountStatusEnum(statut))
+    if role:
+        query = query.filter_by(role=RoleEnum(role))
+
+    users = query.order_by(User.date_creation.desc()).all()
+
+    items = []
+    for user in users:
+        data = user.to_dict()
+        docs = VerificationDocument.query.filter_by(user_id=user.id).all()
+        data["justificatifs"] = [d.to_dict() for d in docs]
+        if user.role == RoleEnum.ETUDIANT and user.student_profile:
+            data["details"] = user.student_profile.to_dict()
+        elif user.role == RoleEnum.ENSEIGNANT and user.teacher_profile:
+            data["details"] = user.teacher_profile.to_dict()
+        items.append(data)
+
+    return jsonify({"items": items})
+
+
+@admin_bp.get("/documents/<filename>")
+@role_required("admin")
+def download_justificatif(filename):
+    upload_dir = current_app.config["UPLOAD_FOLDER"] + "/justificatifs"
+    return send_from_directory(upload_dir, filename)
+
+
+@admin_bp.post("/accounts/<user_id>/validate")
+@role_required("admin")
+def validate_account(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "Compte introuvable."}), 404
+
+    user.statut = AccountStatusEnum.VALIDE
+    user.date_validation = datetime.utcnow()
+
+    db.session.add(
+        Notification(
+            user_id=user.id,
+            titre="Compte validé",
+            message="Votre compte a été validé. Vous pouvez maintenant vous connecter.",
+        )
+    )
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+
+@admin_bp.post("/accounts/<user_id>/refuse")
+@role_required("admin")
+def refuse_account(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "Compte introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    user.statut = AccountStatusEnum.REFUSE
+
+    message = "Votre inscription a été refusée."
+    if data.get("motif"):
+        message += f" Motif : {data['motif']}"
+
+    db.session.add(Notification(user_id=user.id, titre="Inscription refusée", message=message))
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+
+@admin_bp.post("/accounts/<user_id>/request-document")
+@role_required("admin")
+def request_document(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "Compte introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    user.statut = AccountStatusEnum.PIECE_A_FOURNIR
+
+    message = "Une nouvelle pièce justificative est demandée pour valider votre compte."
+    if data.get("motif"):
+        message += f" {data['motif']}"
+
+    db.session.add(
+        Notification(user_id=user.id, titre="Pièce justificative demandée", message=message)
+    )
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+
+# ---------- Structure académique : filières, options, années, classes ----------
+
+@admin_bp.get("/programs")
+@role_required("admin")
+def admin_list_programs():
+    items = Program.query.order_by(Program.nom).all()
+    return jsonify({"items": [p.to_dict() for p in items]})
+
+
+@admin_bp.post("/programs")
+@role_required("admin")
+def create_program():
+    data = request.get_json(silent=True) or {}
+    if not data.get("nom") or not data.get("code"):
+        return jsonify({"message": "nom et code sont requis."}), 400
+
+    if Program.query.filter_by(code=data["code"]).first():
+        return jsonify({"message": "Ce code de filière existe déjà."}), 409
+
+    program = Program(
+        nom=data["nom"], code=data["code"], description=data.get("description")
+    )
+    db.session.add(program)
+    db.session.commit()
+    return jsonify(program.to_dict()), 201
+
+
+@admin_bp.patch("/programs/<program_id>")
+@role_required("admin")
+def update_program(program_id):
+    program = Program.query.get(program_id)
+    if not program:
+        return jsonify({"message": "Filière introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    for field in ("nom", "code", "description", "actif"):
+        if field in data:
+            setattr(program, field, data[field])
+
+    db.session.commit()
+    return jsonify(program.to_dict())
+
+
+@admin_bp.get("/options")
+@role_required("admin")
+def admin_list_options():
+    program_id = request.args.get("program_id")
+    query = ProgramOption.query
+    if program_id:
+        query = query.filter_by(program_id=program_id)
+    items = query.order_by(ProgramOption.nom).all()
+    return jsonify({"items": [o.to_dict() for o in items]})
+
+
+@admin_bp.post("/options")
+@role_required("admin")
+def create_option():
+    data = request.get_json(silent=True) or {}
+    required = ["nom", "code", "program_id"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if not Program.query.get(data["program_id"]):
+        return jsonify({"message": "Filière introuvable."}), 404
+
+    existing = ProgramOption.query.filter_by(
+        program_id=data["program_id"], code=data["code"]
+    ).first()
+    if existing:
+        return jsonify({"message": "Ce code d'option existe déjà pour cette filière."}), 409
+
+    option = ProgramOption(
+        nom=data["nom"], code=data["code"], program_id=data["program_id"]
+    )
+    db.session.add(option)
+    db.session.commit()
+    return jsonify(option.to_dict()), 201
+
+
+@admin_bp.patch("/options/<option_id>")
+@role_required("admin")
+def update_option(option_id):
+    option = ProgramOption.query.get(option_id)
+    if not option:
+        return jsonify({"message": "Option introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    for field in ("nom", "code", "actif"):
+        if field in data:
+            setattr(option, field, data[field])
+
+    db.session.commit()
+    return jsonify(option.to_dict())
+
+
+@admin_bp.get("/study-years")
+@role_required("admin")
+def admin_list_study_years():
+    items = StudyYear.query.order_by(StudyYear.niveau).all()
+    return jsonify({"items": [y.to_dict() for y in items]})
+
+
+@admin_bp.post("/study-years")
+@role_required("admin")
+def create_study_year():
+    data = request.get_json(silent=True) or {}
+    if not data.get("nom") or data.get("niveau") is None:
+        return jsonify({"message": "nom et niveau sont requis."}), 400
+
+    if StudyYear.query.filter_by(nom=data["nom"]).first():
+        return jsonify({"message": "Cette année d'étude existe déjà."}), 409
+
+    study_year = StudyYear(nom=data["nom"], niveau=data["niveau"])
+    db.session.add(study_year)
+    db.session.commit()
+    return jsonify(study_year.to_dict()), 201
+
+
+@admin_bp.get("/classes")
+@role_required("admin")
+def admin_list_classes():
+    option_id = request.args.get("option_id")
+    query = ClassGroup.query
+    if option_id:
+        query = query.filter_by(option_id=option_id)
+    items = query.all()
+    return jsonify({"items": [c.to_dict() for c in items]})
+
+
+@admin_bp.post("/classes")
+@role_required("admin")
+def create_class():
+    data = request.get_json(silent=True) or {}
+    required = ["nom", "option_id", "study_year_id"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if not ProgramOption.query.get(data["option_id"]):
+        return jsonify({"message": "Option introuvable."}), 404
+    if not StudyYear.query.get(data["study_year_id"]):
+        return jsonify({"message": "Année d'étude introuvable."}), 404
+
+    classe = ClassGroup(
+        nom=data["nom"],
+        option_id=data["option_id"],
+        study_year_id=data["study_year_id"],
+    )
+    db.session.add(classe)
+    db.session.commit()
+    return jsonify(classe.to_dict()), 201
+
+
+@admin_bp.patch("/classes/<class_id>")
+@role_required("admin")
+def update_class(class_id):
+    classe = ClassGroup.query.get(class_id)
+    if not classe:
+        return jsonify({"message": "Classe introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    for field in ("nom", "actif"):
+        if field in data:
+            setattr(classe, field, data[field])
+
+    db.session.commit()
+    return jsonify(classe.to_dict())
+
+
+@admin_bp.get("/teachers")
+@role_required("admin")
+def list_teachers():
+    """Enseignants validés, pour les affecter à des matières/classes."""
+    teachers = (
+        Teacher.query.join(User).filter(User.statut == AccountStatusEnum.VALIDE).all()
+    )
+    return jsonify(
+        {
+            "items": [
+                {"id": t.id, "nom_complet": t.user.nom_complet, "email": t.user.email}
+                for t in teachers
+            ]
+        }
+    )
 
 
 # ---------- Unités d'Enseignement (UE) ----------
@@ -150,3 +484,344 @@ def delete_subject(subject_id):
     db.session.delete(subject)
     db.session.commit()
     return jsonify({"message": "Matière supprimée."})
+
+
+# ---------- Semestres ----------
+
+@admin_bp.get("/semesters")
+@role_required("admin")
+def list_semesters():
+    items = Semester.query.order_by(Semester.date_debut.desc()).all()
+    return jsonify({"items": [s.to_dict() for s in items]})
+
+
+@admin_bp.post("/semesters")
+@role_required("admin")
+def create_semester():
+    data = request.get_json(silent=True) or {}
+    required = ["nom", "annee_academique", "date_debut", "date_fin"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    try:
+        date_debut = datetime.strptime(data["date_debut"], "%Y-%m-%d").date()
+        date_fin = datetime.strptime(data["date_fin"], "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"message": "Dates invalides (format attendu : AAAA-MM-JJ)."}), 400
+
+    if date_fin <= date_debut:
+        return jsonify({"message": "La date de fin doit être après la date de début."}), 400
+
+    existing = Semester.query.filter_by(
+        nom=data["nom"], annee_academique=data["annee_academique"]
+    ).first()
+    if existing:
+        return jsonify({"message": "Ce semestre existe déjà pour cette année académique."}), 409
+
+    semester = Semester(
+        nom=data["nom"],
+        annee_academique=data["annee_academique"],
+        date_debut=date_debut,
+        date_fin=date_fin,
+    )
+    db.session.add(semester)
+    db.session.commit()
+
+    return jsonify(semester.to_dict()), 201
+
+
+# ---------- Affectations enseignant (matière + classe + semestre) ----------
+
+@admin_bp.get("/teacher-assignments")
+@role_required("admin")
+def list_teacher_assignments():
+    teacher_id = request.args.get("teacher_id")
+    semester_id = request.args.get("semester_id")
+
+    query = TeacherAssignment.query
+    if teacher_id:
+        query = query.filter_by(teacher_id=teacher_id)
+    if semester_id:
+        query = query.filter_by(semester_id=semester_id)
+
+    items = query.all()
+    return jsonify({"items": [a.to_dict() for a in items]})
+
+
+@admin_bp.post("/teacher-assignments")
+@role_required("admin")
+def create_teacher_assignment():
+    """
+    Affecte un enseignant à une matière, dans une classe, pour un semestre.
+    Un enseignant peut avoir plusieurs affectations (plusieurs matières et/ou classes).
+    """
+    data = request.get_json(silent=True) or {}
+    required = ["teacher_id", "classe_id", "subject_id", "semester_id"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    teacher = Teacher.query.get(data["teacher_id"])
+    if not teacher:
+        return jsonify({"message": "Enseignant introuvable."}), 404
+    classe = ClassGroup.query.get(data["classe_id"])
+    if not classe:
+        return jsonify({"message": "Classe introuvable."}), 404
+    subject = Subject.query.get(data["subject_id"])
+    if not subject:
+        return jsonify({"message": "Matière introuvable."}), 404
+    semester = Semester.query.get(data["semester_id"])
+    if not semester:
+        return jsonify({"message": "Semestre introuvable."}), 404
+
+    existing = TeacherAssignment.query.filter_by(
+        teacher_id=teacher.id,
+        classe_id=classe.id,
+        subject_id=subject.id,
+        semester_id=semester.id,
+    ).first()
+    if existing:
+        return jsonify({"message": "Cette affectation existe déjà."}), 409
+
+    assignment = TeacherAssignment(
+        teacher_id=teacher.id,
+        classe_id=classe.id,
+        subject_id=subject.id,
+        semester_id=semester.id,
+    )
+    db.session.add(assignment)
+
+    db.session.add(
+        Notification(
+            user_id=teacher.user_id,
+            titre="Nouvelle affectation",
+            message=f"Vous avez été affecté à {subject.nom} — {classe.nom} pour {semester.nom} ({semester.annee_academique}).",
+        )
+    )
+
+    db.session.commit()
+    return jsonify(assignment.to_dict()), 201
+
+
+@admin_bp.delete("/teacher-assignments/<assignment_id>")
+@role_required("admin")
+def delete_teacher_assignment(assignment_id):
+    assignment = TeacherAssignment.query.get(assignment_id)
+    if not assignment:
+        return jsonify({"message": "Affectation introuvable."}), 404
+
+    db.session.delete(assignment)
+    db.session.commit()
+    return jsonify({"message": "Affectation retirée."})
+
+
+# ---------- Emploi du temps (créneaux) ----------
+
+@admin_bp.get("/schedule-slots")
+@role_required("admin")
+def list_schedule_slots():
+    teacher_id = request.args.get("teacher_id")
+    semester_id = request.args.get("semester_id")
+
+    query = ScheduleSlot.query.join(TeacherAssignment)
+    if teacher_id:
+        query = query.filter(TeacherAssignment.teacher_id == teacher_id)
+    if semester_id:
+        query = query.filter(TeacherAssignment.semester_id == semester_id)
+
+    items = query.all()
+    return jsonify({"items": [s.to_dict() for s in items]})
+
+
+@admin_bp.post("/schedule-slots")
+@role_required("admin")
+def create_schedule_slot():
+    """
+    Ajoute un créneau (jour + heure de début/fin + salle) à une affectation
+    déjà décidée par l'administration. C'est la construction de l'emploi du
+    temps de l'enseignant pour le semestre.
+    """
+    data = request.get_json(silent=True) or {}
+    required = ["assignment_id", "jour_semaine", "heure_debut", "heure_fin"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if data["jour_semaine"] not in JOURS_SEMAINE:
+        return (
+            jsonify({"message": f"Jour invalide. Valeurs possibles : {', '.join(JOURS_SEMAINE)}"}),
+            400,
+        )
+
+    assignment = TeacherAssignment.query.get(data["assignment_id"])
+    if not assignment:
+        return jsonify({"message": "Affectation introuvable."}), 404
+
+    if data["heure_fin"] <= data["heure_debut"]:
+        return jsonify({"message": "L'heure de fin doit être après l'heure de début."}), 400
+
+    slot = ScheduleSlot(
+        assignment_id=assignment.id,
+        jour_semaine=data["jour_semaine"],
+        heure_debut=data["heure_debut"],
+        heure_fin=data["heure_fin"],
+        salle=data.get("salle"),
+    )
+    db.session.add(slot)
+    db.session.commit()
+
+    return jsonify(slot.to_dict()), 201
+
+
+@admin_bp.delete("/schedule-slots/<slot_id>")
+@role_required("admin")
+def delete_schedule_slot(slot_id):
+    slot = ScheduleSlot.query.get(slot_id)
+    if not slot:
+        return jsonify({"message": "Créneau introuvable."}), 404
+
+    db.session.delete(slot)
+    db.session.commit()
+    return jsonify({"message": "Créneau supprimé."})
+
+
+@admin_bp.post("/schedule/publish")
+@role_required("admin")
+def publish_schedule():
+    """
+    Notifie un enseignant que son emploi du temps pour un semestre est prêt
+    (à appeler une fois tous les créneaux saisis pour ce semestre).
+    """
+    data = request.get_json(silent=True) or {}
+    teacher_id = data.get("teacher_id")
+    semester_id = data.get("semester_id")
+    if not teacher_id or not semester_id:
+        return jsonify({"message": "teacher_id et semester_id sont requis."}), 400
+
+    teacher = Teacher.query.get(teacher_id)
+    semester = Semester.query.get(semester_id)
+    if not teacher or not semester:
+        return jsonify({"message": "Enseignant ou semestre introuvable."}), 404
+
+    db.session.add(
+        Notification(
+            user_id=teacher.user_id,
+            titre="Emploi du temps disponible",
+            message=f"Votre emploi du temps pour {semester.nom} ({semester.annee_academique}) est disponible.",
+        )
+    )
+    db.session.commit()
+
+    return jsonify({"message": "Notification envoyée à l'enseignant."})
+
+
+# ---------- Programmes annuels & documents administratifs ----------
+
+DESTINATAIRE_TYPES = ["classe", "role_etudiant", "role_enseignant", "tous", "utilisateur"]
+
+
+def _notify_academic_program(academic_program):
+    titre = (
+        "Nouveau programme annuel disponible"
+        if "programme" in academic_program.titre.lower()
+        else "Nouveau document administratif"
+    )
+    message = academic_program.titre
+
+    if academic_program.destinataire_type == "classe":
+        students = Student.query.filter_by(classe_id=academic_program.destinataire_id).all()
+        for s in students:
+            db.session.add(Notification(user_id=s.user_id, titre=titre, message=message))
+    elif academic_program.destinataire_type == "role_etudiant":
+        users = User.query.filter_by(role=RoleEnum.ETUDIANT, statut=AccountStatusEnum.VALIDE).all()
+        for u in users:
+            db.session.add(Notification(user_id=u.id, titre=titre, message=message))
+    elif academic_program.destinataire_type == "role_enseignant":
+        users = User.query.filter_by(role=RoleEnum.ENSEIGNANT, statut=AccountStatusEnum.VALIDE).all()
+        for u in users:
+            db.session.add(Notification(user_id=u.id, titre=titre, message=message))
+    elif academic_program.destinataire_type == "tous":
+        users = User.query.filter(
+            User.role != RoleEnum.ADMIN, User.statut == AccountStatusEnum.VALIDE
+        ).all()
+        for u in users:
+            db.session.add(Notification(user_id=u.id, titre=titre, message=message))
+    elif academic_program.destinataire_type == "utilisateur":
+        db.session.add(
+            Notification(user_id=academic_program.destinataire_id, titre=titre, message=message)
+        )
+
+
+@admin_bp.get("/academic-programs")
+@role_required("admin")
+def list_academic_programs():
+    items = AcademicProgram.query.order_by(AcademicProgram.date_publication.desc()).all()
+    return jsonify({"items": [a.to_dict() for a in items]})
+
+
+@admin_bp.post("/academic-programs")
+@role_required("admin")
+def create_academic_program():
+    """
+    Envoi d'un document administratif (programme annuel, calendrier, note de
+    service, règlement...) à une classe, un rôle entier, tout le monde, ou un
+    utilisateur précis.
+    """
+    form = request.form
+    required = ["titre", "destinataire_type"]
+    missing = [f for f in required if not form.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if form["destinataire_type"] not in DESTINATAIRE_TYPES:
+        return (
+            jsonify(
+                {
+                    "message": f"destinataire_type invalide. Valeurs possibles : {', '.join(DESTINATAIRE_TYPES)}"
+                }
+            ),
+            400,
+        )
+
+    needs_target = form["destinataire_type"] in ("classe", "utilisateur")
+    if needs_target and not form.get("destinataire_id"):
+        return jsonify({"message": "destinataire_id est requis pour ce type de destinataire."}), 400
+
+    fichier = request.files.get("fichier")
+    if not fichier or fichier.filename == "":
+        return jsonify({"message": "Le fichier est obligatoire."}), 400
+    if not _allowed_upload(fichier.filename):
+        return jsonify({"message": "Format de fichier non autorisé."}), 400
+
+    upload_dir = current_app.config["UPLOAD_FOLDER"] + "/programmes"
+    os.makedirs(upload_dir, exist_ok=True)
+    filename = secure_filename(f"{datetime.utcnow().timestamp()}_{fichier.filename}")
+    fichier.save(os.path.join(upload_dir, filename))
+
+    academic_program = AcademicProgram(
+        titre=form["titre"],
+        fichier=filename,
+        annee_academique=form.get("annee_academique"),
+        destinataire_type=form["destinataire_type"],
+        destinataire_id=form.get("destinataire_id"),
+    )
+    db.session.add(academic_program)
+    db.session.flush()
+
+    _notify_academic_program(academic_program)
+
+    db.session.commit()
+    return jsonify(academic_program.to_dict()), 201
+
+
+@admin_bp.get("/academic-programs/<filename>/download")
+@role_required("admin")
+def download_academic_program(filename):
+    upload_dir = current_app.config["UPLOAD_FOLDER"] + "/programmes"
+    return send_from_directory(upload_dir, filename)
+
+
+def _allowed_upload(filename):
+    allowed = current_app.config["ALLOWED_DOCUMENT_EXTENSIONS"]
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed

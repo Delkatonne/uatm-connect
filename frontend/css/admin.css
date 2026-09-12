@@ -1,0 +1,240 @@
+.admin-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.admin-main {
+  padding: 36px 44px;
+  max-width: 1100px;
+}
+
+@media (max-width: 780px) {
+  .admin-main {
+    padding: 22px 18px;
+  }
+}
+
+.admin-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  margin: 0 0 24px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+@media (max-width: 780px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius-m);
+  padding: 16px 18px;
+}
+
+.stat-card .value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--navy);
+}
+
+.stat-card .label {
+  font-size: 12.5px;
+  color: var(--slate);
+  margin-top: 2px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panel-header h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 18px;
+  margin: 0;
+}
+
+.role-filter {
+  display: flex;
+  gap: 6px;
+}
+
+.role-filter button {
+  padding: 6px 14px;
+  border: 1px solid var(--slate-light);
+  background: #fff;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.role-filter button.active {
+  background: var(--navy);
+  color: var(--paper);
+  border-color: var(--navy);
+}
+
+.account-card {
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius-m);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.account-card .top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.account-card .name {
+  font-weight: 500;
+  font-size: 14.5px;
+}
+
+.account-card .meta {
+  font-size: 13px;
+  color: var(--slate);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+.account-card .doc-link {
+  font-size: 12.5px;
+  color: var(--navy);
+  text-decoration: underline;
+}
+
+.account-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-small {
+  padding: 7px 14px;
+  border-radius: var(--radius-s);
+  font-size: 12.5px;
+  border: 1px solid var(--slate-light);
+  background: #fff;
+}
+
+.btn-small.validate {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+
+.btn-small.refuse {
+  background: #fff;
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.btn-small.request-doc {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.inline-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius-m);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.inline-form .field {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 160px;
+}
+
+.inline-form .field input,
+.inline-form .field select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius-s);
+  font-size: 13.5px;
+  font-family: var(--font-ui);
+}
+
+.inline-form button {
+  padding: 9px 18px;
+  background: var(--navy);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.simple-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin-bottom: 32px;
+}
+
+.simple-table th,
+.simple-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--slate-light);
+}
+
+.simple-table th {
+  color: var(--slate);
+  font-weight: 500;
+  font-size: 12.5px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--navy);
+  color: var(--paper);
+  padding: 12px 18px;
+  border-radius: var(--radius-s);
+  font-size: 13.5px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.error {
+  background: var(--red);
+}
