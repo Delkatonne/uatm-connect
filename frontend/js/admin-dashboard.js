@@ -422,6 +422,65 @@ document.getElementById("publishForm").addEventListener("submit", async (e) => {
   }
 });
 
+// ---------- Programmes & documents administratifs ----------
+
+document.getElementById("progDestinataireType").addEventListener("change", (e) => {
+  document.getElementById("progClasseWrapper").style.display =
+    e.target.value === "classe" ? "block" : "none";
+});
+
+document.getElementById("progFichier").addEventListener("change", (e) => {
+  document.getElementById("progFileName").textContent = e.target.files[0]
+    ? `Fichier sélectionné : ${e.target.files[0].name}`
+    : "";
+});
+
+async function loadProgramsList() {
+  const data = await get("/admin/academic-programs");
+  const labels = {
+    classe: "Classe",
+    role_etudiant: "Tous les étudiants",
+    role_enseignant: "Tous les enseignants",
+    tous: "Tout le monde",
+    utilisateur: "Utilisateur précis",
+  };
+  document.querySelector("#programsTable2 tbody").innerHTML = data.items
+    .map(
+      (p) =>
+        `<tr><td>${p.titre}</td><td>${labels[p.destinataire_type] || p.destinataire_type}</td><td>${p.annee_academique || "—"}</td><td>${new Date(p.date_publication).toLocaleDateString("fr-FR")}</td></tr>`
+    )
+    .join("");
+}
+
+document.getElementById("programForm2").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData();
+  formData.append("titre", document.getElementById("progTitre").value.trim());
+  formData.append("annee_academique", document.getElementById("progAnnee").value.trim());
+  formData.append("destinataire_type", document.getElementById("progDestinataireType").value);
+  if (document.getElementById("progDestinataireType").value === "classe") {
+    formData.append("destinataire_id", document.getElementById("progClasse").value);
+  }
+  formData.append("fichier", document.getElementById("progFichier").files[0]);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/academic-programs`, {
+      method: "POST",
+      headers: { ...AuthStore.authHeader() },
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Erreur lors de l'envoi.");
+    showToast("Document envoyé et notifications déclenchées.");
+    e.target.reset();
+    document.getElementById("progFileName").textContent = "";
+    loadProgramsList();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
 // ---------- Initialisation ----------
 
 async function init() {
@@ -430,13 +489,16 @@ async function init() {
   await loadPrograms();
   await loadOptionsAdmin();
   await loadStudyYearsAdmin();
-  await loadClassesAdmin();
+  const classes = await loadClassesAdmin();
   await loadUes();
   await loadSubjectsAdmin();
   await loadSemesters();
   await loadTeachersAdmin();
   await loadAssignments();
   await loadSlots();
+  await loadProgramsList();
+
+  fillSelect(document.getElementById("progClasse"), classes, "id", (c) => c.nom, "Sélectionner…");
 }
 
 init();
