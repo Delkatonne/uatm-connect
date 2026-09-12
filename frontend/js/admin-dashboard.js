@@ -315,10 +315,14 @@ document.getElementById("subjectForm").addEventListener("submit", async (e) => {
 
 // ---------- Semestres & affectations ----------
 
+let semestersCache = [];
+
 async function loadSemesters() {
   const data = await get("/admin/semesters");
+  semestersCache = data.items;
   fillSelect(document.getElementById("assignSemester"), data.items, "id", (s) => `${s.nom} — ${s.annee_academique}`, "Sélectionner…");
   fillSelect(document.getElementById("publishSemester"), data.items, "id", (s) => `${s.nom} — ${s.annee_academique}`, "Sélectionner…");
+  fillSelect(document.getElementById("scheduleFileSemester"), data.items, "id", (s) => `${s.nom} — ${s.annee_academique}`, "Sélectionner…");
   return data.items;
 }
 
@@ -326,6 +330,7 @@ async function loadTeachersAdmin() {
   const data = await get("/admin/teachers");
   fillSelect(document.getElementById("assignTeacher"), data.items, "id", (t) => t.nom_complet, "Sélectionner…");
   fillSelect(document.getElementById("publishTeacher"), data.items, "id", (t) => t.nom_complet, "Sélectionner…");
+  fillSelect(document.getElementById("scheduleFileTeacher"), data.items, "user_id", (t) => t.nom_complet, "Sélectionner…");
   return data.items;
 }
 
@@ -417,6 +422,44 @@ document.getElementById("publishForm").addEventListener("submit", async (e) => {
       semester_id: document.getElementById("publishSemester").value,
     });
     showToast("Enseignant notifié.");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+document.getElementById("scheduleFileInput").addEventListener("change", (e) => {
+  document.getElementById("scheduleFileName").textContent = e.target.files[0]
+    ? `Fichier sélectionné : ${e.target.files[0].name}`
+    : "";
+});
+
+document.getElementById("scheduleFileForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const semesterId = document.getElementById("scheduleFileSemester").value;
+  const semester = semestersCache.find((s) => s.id === semesterId);
+
+  const formData = new FormData();
+  formData.append(
+    "titre",
+    semester ? `Emploi du temps — ${semester.nom} (${semester.annee_academique})` : "Emploi du temps"
+  );
+  formData.append("annee_academique", semester ? semester.annee_academique : "");
+  formData.append("destinataire_type", "utilisateur");
+  formData.append("destinataire_id", document.getElementById("scheduleFileTeacher").value);
+  formData.append("fichier", document.getElementById("scheduleFileInput").files[0]);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/academic-programs`, {
+      method: "POST",
+      headers: { ...AuthStore.authHeader() },
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Erreur lors de l'envoi.");
+    showToast("Emploi du temps envoyé à l'enseignant.");
+    e.target.reset();
+    document.getElementById("scheduleFileName").textContent = "";
   } catch (err) {
     showToast(err.message, true);
   }

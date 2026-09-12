@@ -334,7 +334,12 @@ def list_teachers():
     return jsonify(
         {
             "items": [
-                {"id": t.id, "nom_complet": t.user.nom_complet, "email": t.user.email}
+                {
+                    "id": t.id,
+                    "user_id": t.user_id,
+                    "nom_complet": t.user.nom_complet,
+                    "email": t.user.email,
+                }
                 for t in teachers
             ]
         }

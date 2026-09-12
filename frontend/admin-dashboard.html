@@ -16,7 +16,7 @@
 
   <aside class="sidebar">
     <div class="seal-row">
-      <div class="seal"><img src="../medias/logo-gasa.jpeg" alt="Logo GASA Formation" /></div>
+      <div class="seal"><img src="medias/logo-gasa.jpeg" alt="Logo GASA Formation" /></div>
       <span>UATM Connect</span>
     </div>
     <nav>
@@ -193,6 +193,19 @@
         <div class="field"><label>Enseignant</label><select id="publishTeacher" required></select></div>
         <div class="field"><label>Semestre</label><select id="publishSemester" required></select></div>
         <button type="submit">Notifier l'enseignant</button>
+      </form>
+
+      <div class="panel-header"><h3>Envoyer l'emploi du temps en fichier (PDF, image…)</h3></div>
+      <p class="entry-meta" style="margin-bottom:12px;">Alternative ou complément aux créneaux structurés ci-dessus — utile pour un emploi du temps déjà mis en forme ailleurs (tableau, scan, capture).</p>
+      <form class="inline-form" id="scheduleFileForm" enctype="multipart/form-data">
+        <div class="field"><label>Enseignant</label><select id="scheduleFileTeacher" required></select></div>
+        <div class="field"><label>Semestre</label><select id="scheduleFileSemester" required></select></div>
+        <div class="file-field" style="flex-basis:100%;">
+          <label for="scheduleFileInput">Fichier (PDF, PNG, JPG…)</label>
+          <input type="file" id="scheduleFileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required />
+          <div class="file-name" id="scheduleFileName"></div>
+        </div>
+        <button type="submit">Envoyer à l'enseignant</button>
       </form>
     </section>
 
