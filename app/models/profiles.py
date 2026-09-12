@@ -33,11 +33,8 @@ class Teacher(db.Model):
     matieres_declarees = db.Column(db.Text, nullable=True)  # saisies à l'inscription, à valider par l'admin
 
     user = db.relationship("User", back_populates="teacher_profile")
-    class_links = db.relationship(
-        "TeacherClass", back_populates="teacher", cascade="all, delete-orphan"
-    )
-    subject_links = db.relationship(
-        "TeacherSubject", back_populates="teacher", cascade="all, delete-orphan"
+    assignments = db.relationship(
+        "TeacherAssignment", back_populates="teacher", cascade="all, delete-orphan"
     )
 
     def to_dict(self):
@@ -46,7 +43,9 @@ class Teacher(db.Model):
             "departement": self.departement,
             "fonction": self.fonction,
             "matieres_declarees": self.matieres_declarees,
-            "classes": [link.classe.to_dict() for link in self.class_links],
+            "classes": list(
+                {a.classe.id: a.classe.to_dict() for a in self.assignments if a.classe}.values()
+            ),
         }
 
 

@@ -88,8 +88,8 @@ class ClassGroup(db.Model):
     option = db.relationship("ProgramOption", back_populates="classes")
     study_year = db.relationship("StudyYear")
     students = db.relationship("Student", back_populates="classe")
-    teacher_links = db.relationship(
-        "TeacherClass", back_populates="classe", cascade="all, delete-orphan"
+    teacher_assignments = db.relationship(
+        "TeacherAssignment", back_populates="classe", cascade="all, delete-orphan"
     )
 
     def to_dict(self):
@@ -183,34 +183,3 @@ class Subject(db.Model):
             if self.teaching_unit and self.teaching_unit.study_year
             else None,
         }
-
-
-class TeacherClass(db.Model):
-    """Affectation enseignant <-> classe (dernier mot à l'administration)."""
-
-    __tablename__ = "teacher_classes"
-
-    teacher_id = db.Column(
-        db.String(36), db.ForeignKey("teachers.id"), primary_key=True
-    )
-    class_id = db.Column(db.String(36), db.ForeignKey("classes.id"), primary_key=True)
-    date_affectation = db.Column(db.DateTime, default=datetime.utcnow)
-
-    teacher = db.relationship("Teacher", back_populates="class_links")
-    classe = db.relationship("ClassGroup", back_populates="teacher_links")
-
-
-class TeacherSubject(db.Model):
-    """Affectation enseignant <-> matière."""
-
-    __tablename__ = "teacher_subjects"
-
-    teacher_id = db.Column(
-        db.String(36), db.ForeignKey("teachers.id"), primary_key=True
-    )
-    subject_id = db.Column(
-        db.String(36), db.ForeignKey("subjects.id"), primary_key=True
-    )
-
-    teacher = db.relationship("Teacher", back_populates="subject_links")
-    subject = db.relationship("Subject")

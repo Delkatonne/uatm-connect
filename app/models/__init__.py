@@ -6,9 +6,8 @@ from app.models.academic import (
     ClassGroup,
     TeachingUnit,
     Subject,
-    TeacherClass,
-    TeacherSubject,
 )
+from app.models.schedule import Semester, TeacherAssignment, ScheduleSlot
 from app.models.profiles import Student, Teacher, VerificationDocument
 from app.models.content import (
     Document,
@@ -29,8 +28,9 @@ __all__ = [
     "ClassGroup",
     "TeachingUnit",
     "Subject",
-    "TeacherClass",
-    "TeacherSubject",
+    "Semester",
+    "TeacherAssignment",
+    "ScheduleSlot",
     "Student",
     "Teacher",
     "VerificationDocument",
