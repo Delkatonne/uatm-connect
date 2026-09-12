@@ -1,6 +1,6 @@
 // Point d'entrée unique pour configurer l'URL de l'API Flask.
 // En développement, adapter au port réel du backend (ex: http://localhost:5000/api).
-const API_BASE_URL = window.__UATM_API_BASE_URL__ || "http://localhost:5000/api";
+const API_BASE_URL = window.__UATM_API_BASE_URL__ || "https://uatm-connect.onrender.com/api";
 
 // Stockage du token en mémoire pour la session de navigation en cours.
 // Pour une vraie mise en production, préférer un cookie httpOnly côté serveur
