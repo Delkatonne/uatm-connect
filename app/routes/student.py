@@ -111,10 +111,39 @@ def exams():
     return jsonify({"items": [e.to_dict() for e in items]})
 
 
-@student_bp.get("/notifications")
+@student_bp.get("/programme")
 @role_required("etudiant")
 @account_must_be_valide
-def notifications():
+def programme():
+    """Programme d'étude : matières regroupées par UE pour la filière/année de l'étudiant."""
+    student = _current_student()
+    if not student or not student.classe:
+        return jsonify({"items": []})
+
+    subjects = student.classe.matieres()
+    grouped = {}
+    for s in subjects:
+        ue = s.teaching_unit
+        if not ue:
+            continue
+        grouped.setdefault(ue.id, {"ue": ue.nom, "code": ue.code, "matieres": []})
+        grouped[ue.id]["matieres"].append(s.nom)
+
+    return jsonify({"items": list(grouped.values())})
+
+
+@student_bp.patch("/notifications/<notif_id>/read")
+@role_required("etudiant")
+@account_must_be_valide
+def mark_notification_read(notif_id):
+    user_id = get_jwt_identity()
+    notif = Notification.query.filter_by(id=notif_id, user_id=user_id).first()
+    if not notif:
+        return jsonify({"message": "Notification introuvable."}), 404
+
+    notif.lu = True
+    db.session.commit()
+    return jsonify(notif.to_dict())
     user_id = get_jwt_identity()
     items = (
         Notification.query.filter_by(user_id=user_id)

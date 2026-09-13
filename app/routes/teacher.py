@@ -313,6 +313,20 @@ def publish_exam():
     return jsonify(exam.to_dict()), 201
 
 
+@teacher_bp.patch("/notifications/<notif_id>/read")
+@role_required("enseignant")
+@account_must_be_valide
+def mark_notification_read(notif_id):
+    user_id = get_jwt_identity()
+    notif = Notification.query.filter_by(id=notif_id, user_id=user_id).first()
+    if not notif:
+        return jsonify({"message": "Notification introuvable."}), 404
+
+    notif.lu = True
+    db.session.commit()
+    return jsonify(notif.to_dict())
+
+
 @teacher_bp.get("/notifications")
 @role_required("enseignant")
 @account_must_be_valide

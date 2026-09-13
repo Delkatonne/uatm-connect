@@ -23,6 +23,7 @@ from app.models import (
     Notification,
     VerificationDocument,
     AcademicProgram,
+    Exam,
 )
 from app.models.schedule import JOURS_SEMAINE
 from app.utils.decorators import role_required
@@ -830,3 +831,120 @@ def download_academic_program(filename):
 def _allowed_upload(filename):
     allowed = current_app.config["ALLOWED_DOCUMENT_EXTENSIONS"]
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed
+
+
+# ---------- Examens (calendrier global) ----------
+
+@admin_bp.get("/exams")
+@role_required("admin")
+def list_exams_admin():
+    classe_id = request.args.get("classe_id")
+    query = Exam.query
+    if classe_id:
+        query = query.filter_by(classe_id=classe_id)
+
+    exams = query.order_by(Exam.date, Exam.heure).all()
+
+    # Détection de conflit : même date + même salle + même créneau horaire,
+    # pour deux classes différentes.
+    by_slot = {}
+    for e in exams:
+        if not e.salle:
+            continue
+        key = (e.date, e.heure, e.salle)
+        by_slot.setdefault(key, []).append(e.id)
+
+    conflicting_ids = {
+        eid for ids in by_slot.values() if len(ids) > 1 for eid in ids
+    }
+
+    items = []
+    for e in exams:
+        data = e.to_dict()
+        data["conflit_salle"] = e.id in conflicting_ids
+        items.append(data)
+
+    return jsonify({"items": items})
+
+
+@admin_bp.post("/exams")
+@role_required("admin")
+def create_exam_admin():
+    """L'administration peut aussi publier directement un examen pour une classe."""
+    data = request.get_json(silent=True) or {}
+    required = ["titre", "classe_id", "subject_id", "date", "heure"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    classe = ClassGroup.query.get(data["classe_id"])
+    if not classe:
+        return jsonify({"message": "Classe introuvable."}), 404
+    if not Subject.query.get(data["subject_id"]):
+        return jsonify({"message": "Matière introuvable."}), 404
+
+    try:
+        exam_date = datetime.strptime(data["date"], "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"message": "Date invalide (format attendu : AAAA-MM-JJ)."}), 400
+
+    exam = Exam(
+        titre=data["titre"],
+        classe_id=data["classe_id"],
+        matiere_id=data["subject_id"],
+        date=exam_date,
+        heure=data["heure"],
+        salle=data.get("salle"),
+    )
+    db.session.add(exam)
+    db.session.flush()
+
+    students = Student.query.filter_by(classe_id=classe.id).all()
+    for s in students:
+        db.session.add(
+            Notification(
+                user_id=s.user_id,
+                titre="Nouvel examen",
+                message=f"{exam.titre} — le {data['date']} à {data['heure']}"
+                + (f", salle {data.get('salle')}" if data.get("salle") else ""),
+            )
+        )
+
+    db.session.commit()
+    return jsonify(exam.to_dict()), 201
+
+
+@admin_bp.patch("/exams/<exam_id>")
+@role_required("admin")
+def update_exam_admin(exam_id):
+    exam = Exam.query.get(exam_id)
+    if not exam:
+        return jsonify({"message": "Examen introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "titre" in data:
+        exam.titre = data["titre"]
+    if "date" in data:
+        try:
+            exam.date = datetime.strptime(data["date"], "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"message": "Date invalide (format attendu : AAAA-MM-JJ)."}), 400
+    if "heure" in data:
+        exam.heure = data["heure"]
+    if "salle" in data:
+        exam.salle = data["salle"]
+
+    db.session.commit()
+    return jsonify(exam.to_dict())
+
+
+@admin_bp.delete("/exams/<exam_id>")
+@role_required("admin")
+def delete_exam_admin(exam_id):
+    exam = Exam.query.get(exam_id)
+    if not exam:
+        return jsonify({"message": "Examen introuvable."}), 404
+
+    db.session.delete(exam)
+    db.session.commit()
+    return jsonify({"message": "Examen supprimé."})

@@ -193,6 +193,8 @@ async function loadClassesAdmin() {
     .map((c) => `<tr><td>${c.nom}</td><td>${c.filiere || "—"}</td><td>${c.option || "—"}</td><td>${c.annee_etude || "—"}</td></tr>`)
     .join("");
   fillSelect(document.getElementById("assignClass"), data.items, "id", (c) => c.nom, "Sélectionner…");
+  fillSelect(document.getElementById("examAdminClasse"), data.items, "id", (c) => c.nom, "Sélectionner…");
+  classesById = Object.fromEntries(data.items.map((c) => [c.id, c.nom]));
   return data.items;
 }
 
@@ -278,6 +280,7 @@ async function loadSubjectsAdmin() {
     .map((s) => `<tr><td>${s.nom}</td><td>${s.ue || "—"}</td><td>${s.filiere || "—"}</td><td>${s.annee_etude || "—"}</td></tr>`)
     .join("");
   fillSelect(document.getElementById("assignSubject"), data.items, "id", (s) => `${s.nom} (${s.filiere} — ${s.annee_etude})`, "Sélectionner…");
+  fillSelect(document.getElementById("examAdminSubject"), data.items, "id", (s) => `${s.nom} (${s.filiere} — ${s.annee_etude})`, "Sélectionner…");
   return data.items;
 }
 
@@ -524,6 +527,62 @@ document.getElementById("programForm2").addEventListener("submit", async (e) => 
   }
 });
 
+// ---------- Examens : calendrier global ----------
+
+async function loadExamsAdmin() {
+  const data = await get("/admin/exams");
+  document.querySelector("#examsAdminTable tbody").innerHTML = data.items.length
+    ? data.items
+        .map(
+          (e) => `
+        <tr class="${e.conflit_salle ? "conflict-row" : ""}" data-exam-id="${e.id}">
+          <td>${e.classe_id ? classesById[e.classe_id] || "—" : "—"}</td>
+          <td>${e.matiere || "—"}</td>
+          <td>${e.titre}</td>
+          <td>${e.date}</td>
+          <td>${e.heure}</td>
+          <td>${e.salle || "—"}${e.conflit_salle ? " ⚠️" : ""}</td>
+          <td><button class="btn-small refuse" data-action="delete-exam">Supprimer</button></td>
+        </tr>`
+        )
+        .join("")
+    : '<tr><td colspan="7">Aucun examen programmé.</td></tr>';
+
+  document.querySelectorAll('[data-action="delete-exam"]').forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      try {
+        await api(`/admin/exams/${row.dataset.examId}`, { method: "DELETE" });
+        showToast("Examen supprimé.");
+        loadExamsAdmin();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+}
+
+let classesById = {};
+
+document.getElementById("examFormAdmin").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await post("/admin/exams", {
+      classe_id: document.getElementById("examAdminClasse").value,
+      subject_id: document.getElementById("examAdminSubject").value,
+      titre: document.getElementById("examAdminTitre").value.trim(),
+      date: document.getElementById("examAdminDate").value,
+      heure: document.getElementById("examAdminHeure").value,
+      salle: document.getElementById("examAdminSalle").value.trim(),
+    });
+    showToast("Examen publié — la classe a été notifiée.");
+    e.target.reset();
+    loadExamsAdmin();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
 // ---------- Initialisation ----------
 
 async function init() {
@@ -540,6 +599,7 @@ async function init() {
   await loadAssignments();
   await loadSlots();
   await loadProgramsList();
+  await loadExamsAdmin();
 
   fillSelect(document.getElementById("progClasse"), classes, "id", (c) => c.nom, "Sélectionner…");
 }

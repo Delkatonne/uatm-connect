@@ -215,7 +215,10 @@
   font-size: 12.5px;
 }
 
-.toast {
+.simple-table tr.conflict-row td {
+  background: rgba(161, 61, 61, 0.08);
+  color: var(--red);
+}
   position: fixed;
   bottom: 24px;
   right: 24px;

@@ -82,7 +82,7 @@ async function loadDashboard() {
     `);
 
     renderList("notifList", "notifCount", notifications.items, "Aucune notification.", (item) => `
-      <div class="entry-row">
+      <div class="entry-row notif-row" data-notif-id="${item.id}" data-lu="${item.lu}" style="cursor:pointer;">
         <div class="entry-marker"></div>
         <div class="entry-body">
           <p class="entry-title">${item.titre}${item.lu ? "" : ' <span class="badge attente">Nouveau</span>'}</p>
@@ -91,6 +91,40 @@ async function loadDashboard() {
         <div class="entry-date">${formatDate(item.date)}</div>
       </div>
     `);
+
+    document.querySelectorAll(".notif-row").forEach((row) => {
+      if (row.dataset.lu === "true") return;
+      row.addEventListener("click", async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/student/notifications/${row.dataset.notifId}/read`, {
+            method: "PATCH",
+            headers: { ...AuthStore.authHeader() },
+          });
+          if (response.ok) {
+            row.querySelector(".badge")?.remove();
+            row.dataset.lu = "true";
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    });
+
+    const programme = await apiGet("/student/programme");
+    document.getElementById("programmeList").innerHTML = programme.items.length
+      ? programme.items
+          .map(
+            (ue) => `
+        <div class="entry-row">
+          <div class="entry-marker"></div>
+          <div class="entry-body">
+            <p class="entry-title">${ue.ue}${ue.code ? " (" + ue.code + ")" : ""}</p>
+            <p class="entry-meta">${ue.matieres.join(" · ")}</p>
+          </div>
+        </div>`
+          )
+          .join("")
+      : '<div class="empty-state">Le programme de votre classe n\'a pas encore été renseigné.</div>';
 
     const adminDocs = await apiGet("/student/academic-programs");
     renderList("adminDocsList", "adminDocsCount", adminDocs.items, "Aucun document administratif pour le moment.", (item) => `

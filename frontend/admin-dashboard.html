@@ -27,6 +27,7 @@
       <a href="#" class="tab-link" data-tab="assignments">Affectations</a>
       <a href="#" class="tab-link" data-tab="schedule">Emploi du temps</a>
       <a href="#" class="tab-link" data-tab="programs">Programmes &amp; documents</a>
+      <a href="#" class="tab-link" data-tab="exams">Examens</a>
     </nav>
     <div class="sidebar-footer">GASA Formation<br />Administration</div>
   </aside>
@@ -244,6 +245,29 @@
 
       <table class="simple-table" id="programsTable2">
         <thead><tr><th>Titre</th><th>Destinataire</th><th>Année académique</th><th>Date</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Examens : calendrier global -->
+    <section class="tab-panel" id="tab-exams">
+      <h1 class="admin-title">Examens — calendrier global</h1>
+
+      <div class="panel-header"><h3>Publier un examen</h3></div>
+      <form class="inline-form" id="examFormAdmin">
+        <div class="field"><label>Classe</label><select id="examAdminClasse" required></select></div>
+        <div class="field"><label>Matière</label><select id="examAdminSubject" required></select></div>
+        <div class="field"><label>Titre</label><input type="text" id="examAdminTitre" required /></div>
+        <div class="field"><label>Date</label><input type="date" id="examAdminDate" required /></div>
+        <div class="field"><label>Heure</label><input type="time" id="examAdminHeure" required /></div>
+        <div class="field"><label>Salle</label><input type="text" id="examAdminSalle" /></div>
+        <button type="submit">Publier</button>
+      </form>
+
+      <div class="panel-header"><h3>Tous les examens</h3></div>
+      <p class="entry-meta" style="margin-bottom:12px;">Les lignes en rouge indiquent un conflit de salle : même date, même heure, même salle pour deux classes différentes.</p>
+      <table class="simple-table" id="examsAdminTable">
+        <thead><tr><th>Classe</th><th>Matière</th><th>Titre</th><th>Date</th><th>Heure</th><th>Salle</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </section>

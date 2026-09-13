@@ -255,7 +255,7 @@ async function loadNotifications() {
     ? data.items
         .map(
           (n) => `
-      <div class="entry-row">
+      <div class="entry-row notif-row" data-notif-id="${n.id}" data-lu="${n.lu}" style="cursor:pointer;">
         <div class="entry-marker"></div>
         <div class="entry-body">
           <p class="entry-title">${n.titre}${n.lu ? "" : ' <span class="badge attente">Nouveau</span>'}</p>
@@ -266,6 +266,28 @@ async function loadNotifications() {
         )
         .join("")
     : '<div class="empty-state">Aucune notification.</div>';
+
+  document.querySelectorAll(".notif-row").forEach((row) => {
+    if (row.dataset.lu === "true") return;
+    row.addEventListener("click", async () => {
+      try {
+        await apiPostJsonPatch(`/teacher/notifications/${row.dataset.notifId}/read`);
+        row.querySelector(".badge")?.remove();
+        row.dataset.lu = "true";
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  });
+}
+
+async function apiPostJsonPatch(path) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: { ...AuthStore.authHeader() },
+  });
+  if (!response.ok) throw new Error(`Erreur ${response.status}`);
+  return response.json();
 }
 
 // ---------- Documents administratifs ----------
