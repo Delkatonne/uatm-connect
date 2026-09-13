@@ -9,6 +9,7 @@ from app.models.academic import (
 )
 from app.models.schedule import Semester, TeacherAssignment, ScheduleSlot
 from app.models.profiles import Student, Teacher, VerificationDocument
+from app.models.grade import Grade, GradeTypeEnum
 from app.models.content import (
     Document,
     Exam,
@@ -34,6 +35,8 @@ __all__ = [
     "Student",
     "Teacher",
     "VerificationDocument",
+    "Grade",
+    "GradeTypeEnum",
     "Document",
     "Exam",
     "Notification",

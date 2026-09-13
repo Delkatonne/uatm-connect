@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
-from app.models import Document, Exam, Notification, Student, User, AcademicProgram
+from app.models import Document, Exam, Notification, Student, User, AcademicProgram, Grade
 from app.utils.decorators import account_must_be_valide, role_required
 
 student_bp = Blueprint("student", __name__, url_prefix="/api/student")
@@ -179,3 +179,16 @@ def academic_programs():
     ).order_by(AcademicProgram.date_publication.desc()).all()
 
     return jsonify({"items": [a.to_dict() for a in items]})
+
+
+@student_bp.get("/grades")
+@role_required("etudiant")
+@account_must_be_valide
+def grades():
+    """Mes notes : interrogations, sessions, sessions de rattrapage."""
+    student = _current_student()
+    if not student:
+        return jsonify({"items": []})
+
+    items = Grade.query.filter_by(student_id=student.id).all()
+    return jsonify({"items": [g.to_dict() for g in items]})

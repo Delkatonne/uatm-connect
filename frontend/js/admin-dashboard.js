@@ -583,6 +583,88 @@ document.getElementById("examFormAdmin").addEventListener("submit", async (e) =>
   }
 });
 
+// ---------- Messages ciblés ----------
+
+let selectedStudents = {};
+let searchDebounce = null;
+
+document.getElementById("studentSearchInput").addEventListener("input", (e) => {
+  clearTimeout(searchDebounce);
+  const q = e.target.value.trim();
+  if (q.length < 2) {
+    document.querySelector("#studentSearchTable tbody").innerHTML = "";
+    return;
+  }
+  searchDebounce = setTimeout(() => runStudentSearch(q), 300);
+});
+
+async function runStudentSearch(q) {
+  try {
+    const data = await get(`/admin/students/search?q=${encodeURIComponent(q)}`);
+    document.querySelector("#studentSearchTable tbody").innerHTML = data.items.length
+      ? data.items
+          .map(
+            (s) => `
+        <tr>
+          <td><input type="checkbox" class="student-check" data-user-id="${s.user_id}" data-nom="${s.nom_complet}" ${selectedStudents[s.user_id] ? "checked" : ""} /></td>
+          <td>${s.nom_complet}</td>
+          <td>${s.filiere || "—"}</td>
+          <td>${s.option || "—"}</td>
+          <td>${s.annee_etude || "—"}</td>
+        </tr>`
+          )
+          .join("")
+      : '<tr><td colspan="5">Aucun étudiant trouvé.</td></tr>';
+
+    document.querySelectorAll(".student-check").forEach((cb) => {
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          selectedStudents[cb.dataset.userId] = cb.dataset.nom;
+        } else {
+          delete selectedStudents[cb.dataset.userId];
+        }
+        renderSelectedBar();
+      });
+    });
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function renderSelectedBar() {
+  const names = Object.values(selectedStudents);
+  document.getElementById("selectedStudentsBar").textContent = names.length
+    ? `${names.length} sélectionné(s) : ${names.join(", ")}`
+    : "Aucun destinataire sélectionné.";
+}
+
+document.getElementById("messageForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const userIds = Object.keys(selectedStudents);
+  if (!userIds.length) {
+    showToast("Sélectionnez au moins un étudiant.", true);
+    return;
+  }
+
+  try {
+    const data = await post("/admin/messages", {
+      user_ids: userIds,
+      titre: document.getElementById("messageTitre").value.trim(),
+      message: document.getElementById("messageBody").value.trim(),
+    });
+    showToast(data.message || "Message envoyé.");
+    e.target.reset();
+    selectedStudents = {};
+    renderSelectedBar();
+    document.querySelector("#studentSearchTable tbody").innerHTML = "";
+    document.getElementById("studentSearchInput").value = "";
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+renderSelectedBar();
+
 // ---------- Initialisation ----------
 
 async function init() {

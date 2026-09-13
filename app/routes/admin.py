@@ -24,6 +24,7 @@ from app.models import (
     VerificationDocument,
     AcademicProgram,
     Exam,
+    Grade,
 )
 from app.models.schedule import JOURS_SEMAINE
 from app.utils.decorators import role_required
@@ -948,3 +949,108 @@ def delete_exam_admin(exam_id):
     db.session.delete(exam)
     db.session.commit()
     return jsonify({"message": "Examen supprimé."})
+
+
+# ---------- Recherche d'étudiants & messagerie ciblée ----------
+
+@admin_bp.get("/students/search")
+@role_required("admin")
+def search_students():
+    """Recherche d'étudiants par nom, avec filière/option/année affichées."""
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify({"items": []})
+
+    students = (
+        Student.query.join(User)
+        .filter(User.nom_complet.ilike(f"%{q}%"), User.statut == AccountStatusEnum.VALIDE)
+        .limit(20)
+        .all()
+    )
+
+    items = []
+    for s in students:
+        if not s.classe:
+            continue
+        items.append(
+            {
+                "student_id": s.id,
+                "user_id": s.user_id,
+                "nom_complet": s.user.nom_complet,
+                "filiere": s.classe.option.program.nom if s.classe.option else None,
+                "option": s.classe.option.nom if s.classe.option else None,
+                "annee_etude": s.classe.study_year.nom if s.classe.study_year else None,
+                "classe": s.classe.nom,
+            }
+        )
+    return jsonify({"items": items})
+
+
+@admin_bp.post("/messages")
+@role_required("admin")
+def send_message():
+    """Envoie un message (notification) à un ou plusieurs étudiants sélectionnés."""
+    data = request.get_json(silent=True) or {}
+    required = ["user_ids", "titre", "message"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if not isinstance(data["user_ids"], list) or not data["user_ids"]:
+        return jsonify({"message": "Sélectionnez au moins un destinataire."}), 400
+
+    count = 0
+    for user_id in data["user_ids"]:
+        if User.query.get(user_id):
+            db.session.add(
+                Notification(user_id=user_id, titre=data["titre"], message=data["message"])
+            )
+            count += 1
+
+    db.session.commit()
+    return jsonify({"message": f"Message envoyé à {count} destinataire(s)."})
+
+
+# ---------- Notes (consultation & gestion) ----------
+
+@admin_bp.get("/grades")
+@role_required("admin")
+def list_grades_admin():
+    classe_id = request.args.get("classe_id")
+    subject_id = request.args.get("subject_id")
+
+    query = Grade.query
+    if classe_id:
+        query = query.filter_by(classe_id=classe_id)
+    if subject_id:
+        query = query.filter_by(subject_id=subject_id)
+
+    items = query.all()
+    return jsonify({"items": [g.to_dict() for g in items]})
+
+
+@admin_bp.patch("/grades/<grade_id>")
+@role_required("admin")
+def update_grade_admin(grade_id):
+    grade = Grade.query.get(grade_id)
+    if not grade:
+        return jsonify({"message": "Note introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "valeur" in data:
+        grade.valeur = data["valeur"]
+
+    db.session.commit()
+    return jsonify(grade.to_dict())
+
+
+@admin_bp.delete("/grades/<grade_id>")
+@role_required("admin")
+def delete_grade_admin(grade_id):
+    grade = Grade.query.get(grade_id)
+    if not grade:
+        return jsonify({"message": "Note introuvable."}), 404
+
+    db.session.delete(grade)
+    db.session.commit()
+    return jsonify({"message": "Note supprimée."})

@@ -16,6 +16,8 @@ from app.models import (
     Student,
     DOCUMENT_TYPES,
     AcademicProgram,
+    Grade,
+    GradeTypeEnum,
 )
 from app.utils.decorators import account_must_be_valide, role_required
 
@@ -359,3 +361,134 @@ def academic_programs():
     ).order_by(AcademicProgram.date_publication.desc()).all()
 
     return jsonify({"items": [a.to_dict() for a in items]})
+
+
+# ---------- Notes ----------
+
+GRADE_TYPES = [t.value for t in GradeTypeEnum]
+
+
+@teacher_bp.get("/classes/<classe_id>/students")
+@role_required("enseignant")
+@account_must_be_valide
+def class_students(classe_id):
+    """Liste des étudiants d'une classe qui m'est attribuée, pour la saisie des notes."""
+    teacher = _current_teacher()
+    if not teacher:
+        return jsonify({"items": []})
+
+    has_class = TeacherAssignment.query.filter_by(
+        teacher_id=teacher.id, classe_id=classe_id
+    ).first()
+    if not has_class:
+        return jsonify({"message": "Cette classe ne vous est pas attribuée."}), 403
+
+    students = Student.query.filter_by(classe_id=classe_id).all()
+    return jsonify(
+        {
+            "items": [
+                {"student_id": s.id, "nom_complet": s.user.nom_complet}
+                for s in students
+                if s.user
+            ]
+        }
+    )
+
+
+@teacher_bp.get("/grades")
+@role_required("enseignant")
+@account_must_be_valide
+def list_grades():
+    teacher = _current_teacher()
+    if not teacher:
+        return jsonify({"items": []})
+
+    classe_id = request.args.get("classe_id")
+    subject_id = request.args.get("subject_id")
+
+    query = Grade.query.filter_by(teacher_id=teacher.id)
+    if classe_id:
+        query = query.filter_by(classe_id=classe_id)
+    if subject_id:
+        query = query.filter_by(subject_id=subject_id)
+
+    items = query.all()
+    return jsonify({"items": [g.to_dict() for g in items]})
+
+
+@teacher_bp.post("/grades")
+@role_required("enseignant")
+@account_must_be_valide
+def submit_grades():
+    """
+    Saisie groupée des notes pour une classe/matière/type d'évaluation.
+    Corps attendu :
+      { classe_id, subject_id, semester_id, type,
+        entries: [{ student_id, valeur }, ...] }
+    """
+    teacher = _current_teacher()
+    if not teacher:
+        return jsonify({"message": "Profil enseignant introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    required = ["classe_id", "subject_id", "type", "entries"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if data["type"] not in GRADE_TYPES:
+        return jsonify({"message": f"Type invalide. Valeurs possibles : {', '.join(GRADE_TYPES)}"}), 400
+
+    if not _has_assignment(teacher.id, data["classe_id"], data["subject_id"]):
+        return (
+            jsonify({"message": "Vous n'êtes pas affecté à cette matière pour cette classe."}),
+            403,
+        )
+
+    saved = []
+    for entry in data["entries"]:
+        student_id = entry.get("student_id")
+        valeur = entry.get("valeur")
+        if student_id is None or valeur is None:
+            continue
+
+        grade = Grade.query.filter_by(
+            student_id=student_id,
+            subject_id=data["subject_id"],
+            type=data["type"],
+            semester_id=data.get("semester_id"),
+        ).first()
+
+        if grade:
+            grade.valeur = valeur
+        else:
+            grade = Grade(
+                student_id=student_id,
+                subject_id=data["subject_id"],
+                classe_id=data["classe_id"],
+                semester_id=data.get("semester_id"),
+                teacher_id=teacher.id,
+                type=data["type"],
+                valeur=valeur,
+                bareme=entry.get("bareme", 20),
+            )
+            db.session.add(grade)
+        saved.append(grade)
+
+    db.session.flush()
+
+    student = Student.query.get(data["entries"][0].get("student_id")) if data["entries"] else None
+    subject_nom = saved[0].subject.nom if saved and saved[0].subject else "une matière"
+
+    for grade in saved:
+        if grade.student and grade.student.user_id:
+            db.session.add(
+                Notification(
+                    user_id=grade.student.user_id,
+                    titre="Nouvelle note disponible",
+                    message=f"Votre note de {grade.type.value} en {subject_nom} est disponible.",
+                )
+            )
+
+    db.session.commit()
+    return jsonify({"items": [g.to_dict() for g in saved]}), 201

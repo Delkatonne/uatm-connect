@@ -126,6 +126,17 @@ async function loadDashboard() {
           .join("")
       : '<div class="empty-state">Le programme de votre classe n\'a pas encore été renseigné.</div>';
 
+    const grades = await apiGet("/student/grades");
+    const typeLabels = { interrogation: "Interrogation", session: "Session", rattrapage: "Rattrapage" };
+    document.querySelector("#gradesTable tbody").innerHTML = grades.items.length
+      ? grades.items
+          .map(
+            (g) =>
+              `<tr><td>${g.matiere || "—"}</td><td>${typeLabels[g.type] || g.type}</td><td>${g.valeur} / ${g.bareme}</td><td>${g.semestre || "—"}</td></tr>`
+          )
+          .join("")
+      : '<tr><td colspan="4">Aucune note disponible pour le moment.</td></tr>';
+
     const adminDocs = await apiGet("/student/academic-programs");
     renderList("adminDocsList", "adminDocsCount", adminDocs.items, "Aucun document administratif pour le moment.", (item) => `
       <div class="entry-row">

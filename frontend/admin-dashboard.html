@@ -28,6 +28,7 @@
       <a href="#" class="tab-link" data-tab="schedule">Emploi du temps</a>
       <a href="#" class="tab-link" data-tab="programs">Programmes &amp; documents</a>
       <a href="#" class="tab-link" data-tab="exams">Examens</a>
+      <a href="#" class="tab-link" data-tab="messages">Messages</a>
     </nav>
     <div class="sidebar-footer">GASA Formation<br />Administration</div>
   </aside>
@@ -270,6 +271,36 @@
         <thead><tr><th>Classe</th><th>Matière</th><th>Titre</th><th>Date</th><th>Heure</th><th>Salle</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
+    </section>
+
+    <!-- Messages ciblés -->
+    <section class="tab-panel" id="tab-messages">
+      <h1 class="admin-title">Envoyer un message à des étudiants</h1>
+
+      <div class="field" style="max-width:420px; margin-bottom:12px;">
+        <label>Rechercher un étudiant par nom</label>
+        <input type="text" id="studentSearchInput" placeholder="Tapez au moins 2 lettres…" style="width:100%; padding:10px 12px; border:1px solid var(--slate-light); border-radius:3px;" />
+      </div>
+
+      <table class="simple-table" id="studentSearchTable">
+        <thead><tr><th></th><th>Nom</th><th>Filière</th><th>Option</th><th>Année</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="selectedStudentsBar" style="margin: 12px 0; font-size:13px; color:var(--slate);"></div>
+
+      <div class="panel-header"><h3>Message</h3></div>
+      <form id="messageForm" style="display:flex; flex-direction:column; gap:12px; max-width:560px;">
+        <div class="field">
+          <label>Titre</label>
+          <input type="text" id="messageTitre" required style="width:100%; padding:10px 12px; border:1px solid var(--slate-light); border-radius:3px;" />
+        </div>
+        <div class="field">
+          <label>Message</label>
+          <textarea id="messageBody" rows="4" required style="width:100%; padding:10px 12px; border:1px solid var(--slate-light); border-radius:3px; font-family:var(--font-ui);"></textarea>
+        </div>
+        <button type="submit" style="align-self:flex-start; padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Envoyer</button>
+      </form>
     </section>
 
   </main>

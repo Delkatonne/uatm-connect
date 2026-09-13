@@ -120,6 +120,8 @@ function populateClassSubjectSelects(classes, subjects) {
   fillSelect(document.getElementById("docSubject"), subjects, "id", (s) => s.nom);
   fillSelect(document.getElementById("examClasse"), classes, "id", (c) => c.nom);
   fillSelect(document.getElementById("examSubject"), subjects, "id", (s) => s.nom);
+  fillSelect(document.getElementById("gradeClasse"), classes, "id", (c) => c.nom);
+  fillSelect(document.getElementById("gradeSubject"), subjects, "id", (s) => s.nom);
 }
 
 document.getElementById("docFichier").addEventListener("change", (e) => {
@@ -226,6 +228,15 @@ async function loadScheduleSemesters() {
     .map(([id, label]) => `<option value="${id}">${label}</option>`)
     .join("");
 
+  const gradeSemesterSelect = document.getElementById("gradeSemester");
+  if (gradeSemesterSelect) {
+    gradeSemesterSelect.innerHTML =
+      '<option value="">Sans semestre</option>' +
+      Object.entries(semesters)
+        .map(([id, label]) => `<option value="${id}">${label}</option>`)
+        .join("");
+  }
+
   if (select.value) loadSchedule(select.value);
   select.addEventListener("change", () => loadSchedule(select.value));
   if (select.options.length) loadSchedule(select.options[0].value);
@@ -246,6 +257,67 @@ async function loadSchedule(semesterId) {
         .join("")
     : '<tr><td colspan="5">Aucun créneau pour ce semestre.</td></tr>';
 }
+
+// ---------- Notes ----------
+
+document.getElementById("gradeSetupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const classeId = document.getElementById("gradeClasse").value;
+
+  try {
+    const data = await apiGet(`/teacher/classes/${classeId}/students`);
+    const table = document.getElementById("gradeEntryTable");
+    const tbody = table.querySelector("tbody");
+
+    if (!data.items.length) {
+      tbody.innerHTML = '<tr><td colspan="2">Aucun étudiant dans cette classe.</td></tr>';
+    } else {
+      tbody.innerHTML = data.items
+        .map(
+          (s) => `
+        <tr data-student-id="${s.student_id}">
+          <td>${s.nom_complet}</td>
+          <td><input type="number" min="0" max="20" step="0.25" class="grade-input" style="width:80px; padding:6px 8px; border:1px solid var(--slate-light); border-radius:3px;" /></td>
+        </tr>`
+        )
+        .join("");
+    }
+
+    table.style.display = "table";
+    document.getElementById("saveGradesBtn").style.display = "inline-block";
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+document.getElementById("saveGradesBtn").addEventListener("click", async () => {
+  const rows = document.querySelectorAll("#gradeEntryTable tbody tr[data-student-id]");
+  const entries = [];
+  rows.forEach((row) => {
+    const input = row.querySelector(".grade-input");
+    if (input && input.value !== "") {
+      entries.push({ student_id: row.dataset.studentId, valeur: parseFloat(input.value) });
+    }
+  });
+
+  if (!entries.length) {
+    showToast("Renseignez au moins une note.", true);
+    return;
+  }
+
+  try {
+    await apiPostJson("/teacher/grades", {
+      classe_id: document.getElementById("gradeClasse").value,
+      subject_id: document.getElementById("gradeSubject").value,
+      type: document.getElementById("gradeType").value,
+      semester_id: document.getElementById("gradeSemester").value || null,
+      entries,
+    });
+    showToast("Notes enregistrées — les étudiants ont été notifiés.");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
 
 // ---------- Notifications ----------
 
