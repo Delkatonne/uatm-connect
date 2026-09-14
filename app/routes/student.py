@@ -2,7 +2,18 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
-from app.models import Document, Exam, Notification, Student, User, AcademicProgram, Grade
+from app.models import (
+    Document,
+    Exam,
+    Notification,
+    Student,
+    User,
+    AcademicProgram,
+    Grade,
+    Absence,
+    ScheduleSlot,
+    TeacherAssignment,
+)
 from app.utils.decorators import account_must_be_valide, role_required
 
 student_bp = Blueprint("student", __name__, url_prefix="/api/student")
@@ -32,6 +43,7 @@ def me():
             "option": student.classe.option.nom,
             "annee_etude": student.classe.study_year.nom,
             "classe": student.classe.nom,
+            "centre": student.centre.nom if student.centre else None,
         }
     )
 
@@ -192,3 +204,71 @@ def grades():
 
     items = Grade.query.filter_by(student_id=student.id).all()
     return jsonify({"items": [g.to_dict() for g in items]})
+
+
+@student_bp.get("/absences")
+@role_required("etudiant")
+@account_must_be_valide
+def absences():
+    student = _current_student()
+    if not student:
+        return jsonify({"items": []})
+
+    items = Absence.query.filter_by(student_id=student.id).order_by(Absence.date.desc()).all()
+    return jsonify({"items": [a.to_dict() for a in items]})
+
+
+@student_bp.get("/schedule")
+@role_required("etudiant")
+@account_must_be_valide
+def schedule():
+    """Mon emploi du temps (créneaux de ma classe, pour un semestre donné)."""
+    student = _current_student()
+    if not student or not student.classe_id:
+        return jsonify({"items": []})
+
+    semester_id = request.args.get("semester_id")
+    if not semester_id:
+        return jsonify({"message": "semester_id est requis."}), 400
+
+    slots = (
+        ScheduleSlot.query.join(TeacherAssignment)
+        .filter(
+            TeacherAssignment.classe_id == student.classe_id,
+            TeacherAssignment.semester_id == semester_id,
+        )
+        .all()
+    )
+
+    items = []
+    for s in slots:
+        data = s.to_dict()
+        data["enseignant"] = (
+            s.assignment.teacher.user.nom_complet
+            if s.assignment and s.assignment.teacher and s.assignment.teacher.user
+            else None
+        )
+        items.append(data)
+
+    return jsonify({"items": items})
+
+
+@student_bp.get("/semesters")
+@role_required("etudiant")
+@account_must_be_valide
+def student_semesters():
+    """Semestres pour lesquels ma classe a un emploi du temps."""
+    student = _current_student()
+    if not student or not student.classe_id:
+        return jsonify({"items": []})
+
+    assignments = TeacherAssignment.query.filter_by(classe_id=student.classe_id).all()
+    seen = {}
+    for a in assignments:
+        if a.semester_id and a.semester_id not in seen:
+            seen[a.semester_id] = {
+                "id": a.semester_id,
+                "nom": a.semestre,
+                "annee_academique": a.annee_academique,
+            }
+    return jsonify({"items": list(seen.values())})

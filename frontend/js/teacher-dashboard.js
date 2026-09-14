@@ -122,6 +122,8 @@ function populateClassSubjectSelects(classes, subjects) {
   fillSelect(document.getElementById("examSubject"), subjects, "id", (s) => s.nom);
   fillSelect(document.getElementById("gradeClasse"), classes, "id", (c) => c.nom);
   fillSelect(document.getElementById("gradeSubject"), subjects, "id", (s) => s.nom);
+  fillSelect(document.getElementById("absenceClasse"), classes, "id", (c) => c.nom);
+  fillSelect(document.getElementById("absenceSubject"), subjects, "id", (s) => s.nom);
 }
 
 document.getElementById("docFichier").addEventListener("change", (e) => {
@@ -314,6 +316,62 @@ document.getElementById("saveGradesBtn").addEventListener("click", async () => {
       entries,
     });
     showToast("Notes enregistrées — les étudiants ont été notifiés.");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+// ---------- Absences ----------
+
+document.getElementById("absenceSetupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const classeId = document.getElementById("absenceClasse").value;
+
+  try {
+    const data = await apiGet(`/teacher/classes/${classeId}/students`);
+    const table = document.getElementById("absenceEntryTable");
+    const tbody = table.querySelector("tbody");
+
+    tbody.innerHTML = data.items.length
+      ? data.items
+          .map(
+            (s) => `
+        <tr data-student-id="${s.student_id}">
+          <td>${s.nom_complet}</td>
+          <td><input type="checkbox" class="absence-check" /></td>
+        </tr>`
+          )
+          .join("")
+      : '<tr><td colspan="2">Aucun étudiant dans cette classe.</td></tr>';
+
+    table.style.display = "table";
+    document.getElementById("saveAbsencesBtn").style.display = "inline-block";
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+document.getElementById("saveAbsencesBtn").addEventListener("click", async () => {
+  const rows = document.querySelectorAll("#absenceEntryTable tbody tr[data-student-id]");
+  const studentIds = [];
+  rows.forEach((row) => {
+    const checkbox = row.querySelector(".absence-check");
+    if (checkbox && checkbox.checked) studentIds.push(row.dataset.studentId);
+  });
+
+  if (!studentIds.length) {
+    showToast("Cochez au moins un étudiant absent.", true);
+    return;
+  }
+
+  try {
+    await apiPostJson("/teacher/absences", {
+      classe_id: document.getElementById("absenceClasse").value,
+      subject_id: document.getElementById("absenceSubject").value,
+      date: document.getElementById("absenceDate").value,
+      student_ids: studentIds,
+    });
+    showToast("Absences enregistrées.");
   } catch (err) {
     showToast(err.message, true);
   }

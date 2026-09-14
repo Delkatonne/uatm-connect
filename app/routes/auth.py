@@ -15,6 +15,7 @@ from app.models import (
     VerificationDocument,
     ClassGroup,
     Program,
+    Center,
 )
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -87,7 +88,7 @@ def register_student():
     """
     Inscription étudiant (multipart/form-data) :
       nom_complet, email, telephone, mot_de_passe, confirmation_mot_de_passe,
-      classe_id, annee_inscription, justificatif (fichier)
+      centre_id, classe_id, annee_inscription, justificatif (fichier)
     """
     form = request.form
     required_fields = [
@@ -95,6 +96,7 @@ def register_student():
         "email",
         "mot_de_passe",
         "confirmation_mot_de_passe",
+        "centre_id",
         "classe_id",
         "annee_inscription",
     ]
@@ -111,6 +113,10 @@ def register_student():
     email = form["email"].strip().lower()
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Cet e-mail est déjà utilisé."}), 409
+
+    centre = Center.query.get(form["centre_id"])
+    if not centre:
+        return jsonify({"message": "Centre introuvable."}), 404
 
     classe = ClassGroup.query.get(form["classe_id"])
     if not classe:
@@ -139,6 +145,7 @@ def register_student():
         user_id=user.id,
         annee_inscription=form["annee_inscription"],
         classe_id=classe.id,
+        centre_id=centre.id,
     )
     db.session.add(student)
 

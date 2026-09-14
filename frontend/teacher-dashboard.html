@@ -25,6 +25,7 @@
       <a href="#" class="tab-link" data-tab="publications">Mes publications</a>
       <a href="#" class="tab-link" data-tab="examens">Examens</a>
       <a href="#" class="tab-link" data-tab="notes">Notes</a>
+      <a href="#" class="tab-link" data-tab="absences">Absences</a>
       <a href="#" class="tab-link" data-tab="emploi">Emploi du temps</a>
       <a href="#" class="tab-link" data-tab="notifications">Notifications</a>
       <a href="#" class="tab-link" data-tab="documents-admin">Documents administratifs</a>
@@ -132,6 +133,23 @@
         <tbody></tbody>
       </table>
       <button type="button" id="saveGradesBtn" style="display:none; padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Enregistrer les notes</button>
+    </section>
+
+    <!-- Absences -->
+    <section class="tab-panel" id="tab-absences">
+      <h1 class="admin-title">Saisie des absences</h1>
+      <form class="inline-form" id="absenceSetupForm" style="margin-bottom:12px;">
+        <div class="field"><label>Classe</label><select id="absenceClasse" required></select></div>
+        <div class="field"><label>Matière</label><select id="absenceSubject" required></select></div>
+        <div class="field"><label>Date</label><input type="date" id="absenceDate" required /></div>
+        <button type="submit">Charger les étudiants</button>
+      </form>
+
+      <table class="simple-table" id="absenceEntryTable" style="display:none;">
+        <thead><tr><th>Étudiant</th><th>Absent</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button type="button" id="saveAbsencesBtn" style="display:none; padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Enregistrer les absences</button>
     </section>
 
     <!-- Emploi du temps -->

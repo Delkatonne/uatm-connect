@@ -3,6 +3,7 @@ from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
 from werkzeug.utils import secure_filename
+from sqlalchemy import func
 
 from app.extensions import db
 from app.models import (
@@ -25,6 +26,8 @@ from app.models import (
     AcademicProgram,
     Exam,
     Grade,
+    Center,
+    Absence,
 )
 from app.models.schedule import JOURS_SEMAINE
 from app.utils.decorators import role_required
@@ -1054,3 +1057,150 @@ def delete_grade_admin(grade_id):
     db.session.delete(grade)
     db.session.commit()
     return jsonify({"message": "Note supprimée."})
+
+
+# ---------- Centres ----------
+
+@admin_bp.get("/centers")
+@role_required("admin")
+def admin_list_centers():
+    items = Center.query.order_by(Center.nom).all()
+    return jsonify({"items": [c.to_dict() for c in items]})
+
+
+@admin_bp.post("/centers")
+@role_required("admin")
+def create_center():
+    data = request.get_json(silent=True) or {}
+    if not data.get("nom"):
+        return jsonify({"message": "nom est requis."}), 400
+
+    if Center.query.filter_by(nom=data["nom"]).first():
+        return jsonify({"message": "Ce centre existe déjà."}), 409
+
+    center = Center(nom=data["nom"])
+    db.session.add(center)
+    db.session.commit()
+    return jsonify(center.to_dict()), 201
+
+
+@admin_bp.patch("/centers/<center_id>")
+@role_required("admin")
+def update_center(center_id):
+    center = Center.query.get(center_id)
+    if not center:
+        return jsonify({"message": "Centre introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "nom" in data:
+        center.nom = data["nom"]
+    if "actif" in data:
+        center.actif = data["actif"]
+
+    db.session.commit()
+    return jsonify(center.to_dict())
+
+
+@admin_bp.delete("/centers/<center_id>")
+@role_required("admin")
+def delete_center(center_id):
+    center = Center.query.get(center_id)
+    if not center:
+        return jsonify({"message": "Centre introuvable."}), 404
+
+    db.session.delete(center)
+    db.session.commit()
+    return jsonify({"message": "Centre supprimé."})
+
+
+# ---------- Absences ----------
+
+@admin_bp.get("/absences")
+@role_required("admin")
+def list_absences_admin():
+    classe_id = request.args.get("classe_id")
+    query = Absence.query
+    if classe_id:
+        query = query.filter_by(classe_id=classe_id)
+
+    items = query.order_by(Absence.date.desc()).all()
+    return jsonify({"items": [a.to_dict() for a in items]})
+
+
+@admin_bp.patch("/absences/<absence_id>")
+@role_required("admin")
+def update_absence_admin(absence_id):
+    """Justifier ou déjustifier une absence, avec motif éventuel."""
+    absence = Absence.query.get(absence_id)
+    if not absence:
+        return jsonify({"message": "Absence introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "justifiee" in data:
+        absence.justifiee = data["justifiee"]
+    if "motif" in data:
+        absence.motif = data["motif"]
+
+    db.session.commit()
+    return jsonify(absence.to_dict())
+
+
+@admin_bp.delete("/absences/<absence_id>")
+@role_required("admin")
+def delete_absence_admin(absence_id):
+    absence = Absence.query.get(absence_id)
+    if not absence:
+        return jsonify({"message": "Absence introuvable."}), 404
+
+    db.session.delete(absence)
+    db.session.commit()
+    return jsonify({"message": "Absence supprimée."})
+
+
+# ---------- Rapports & statistiques avancées ----------
+
+@admin_bp.get("/reports")
+@role_required("admin")
+def reports():
+    students_by_program = (
+        db.session.query(Program.nom, func.count(Student.id))
+        .select_from(Student)
+        .join(ClassGroup, Student.classe_id == ClassGroup.id)
+        .join(ProgramOption, ClassGroup.option_id == ProgramOption.id)
+        .join(Program, ProgramOption.program_id == Program.id)
+        .group_by(Program.nom)
+        .all()
+    )
+
+    students_by_classe = (
+        db.session.query(ClassGroup.nom, func.count(Student.id))
+        .select_from(Student)
+        .join(ClassGroup, Student.classe_id == ClassGroup.id)
+        .group_by(ClassGroup.nom)
+        .all()
+    )
+
+    documents_by_type = (
+        db.session.query(Document.type, func.count(Document.id))
+        .group_by(Document.type)
+        .all()
+    )
+
+    today = datetime.utcnow().date()
+    exams_upcoming = Exam.query.filter(Exam.date >= today).count()
+    exams_past = Exam.query.filter(Exam.date < today).count()
+
+    absences_total = Absence.query.count()
+    absences_non_justifiees = Absence.query.filter_by(justifiee=False).count()
+
+    return jsonify(
+        {
+            "students_by_program": [{"label": n, "count": c} for n, c in students_by_program],
+            "students_by_classe": [{"label": n, "count": c} for n, c in students_by_classe],
+            "documents_by_type": [{"label": t, "count": c} for t, c in documents_by_type],
+            "exams_upcoming": exams_upcoming,
+            "exams_past": exams_past,
+            "absences_total": absences_total,
+            "absences_non_justifiees": absences_non_justifiees,
+        }
+    )

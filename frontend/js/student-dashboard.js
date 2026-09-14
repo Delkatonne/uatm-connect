@@ -35,6 +35,7 @@ async function loadDashboard() {
 
     document.getElementById("greeting").textContent = `Bonjour, ${me.nom_complet}`;
     document.getElementById("identityLine").innerHTML = `
+      <span>Centre : <strong>${me.centre || "—"}</strong></span>
       <span>Filière : <strong>${me.filiere}</strong></span>
       <span>Option : <strong>${me.option}</strong></span>
       <span>Année : <strong>${me.annee_etude}</strong></span>
@@ -136,6 +137,42 @@ async function loadDashboard() {
           )
           .join("")
       : '<tr><td colspan="4">Aucune note disponible pour le moment.</td></tr>';
+
+    const absencesData = await apiGet("/student/absences");
+    document.querySelector("#absencesTableStudent tbody").innerHTML = absencesData.items.length
+      ? absencesData.items
+          .map(
+            (a) =>
+              `<tr><td>${a.date}</td><td>${a.matiere || "—"}</td><td>${a.justifiee ? "Justifiée" : "Non justifiée"}</td></tr>`
+          )
+          .join("")
+      : '<tr><td colspan="3">Aucune absence enregistrée.</td></tr>';
+
+    const JOURS_ORDRE = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+    const semesters = await apiGet("/student/semesters");
+    const semesterSelect = document.getElementById("scheduleSemesterStudent");
+    semesterSelect.innerHTML = semesters.items
+      .map((s) => `<option value="${s.id}">${s.nom} — ${s.annee_academique}</option>`)
+      .join("");
+
+    async function loadStudentSchedule(semesterId) {
+      if (!semesterId) return;
+      const scheduleData = await apiGet(`/student/schedule?semester_id=${semesterId}`);
+      const sorted = scheduleData.items.sort(
+        (a, b) => JOURS_ORDRE.indexOf(a.jour_semaine) - JOURS_ORDRE.indexOf(b.jour_semaine)
+      );
+      document.querySelector("#scheduleTableStudent tbody").innerHTML = sorted.length
+        ? sorted
+            .map(
+              (s) =>
+                `<tr><td>${s.jour_semaine}</td><td>${s.heure_debut}–${s.heure_fin}</td><td>${s.matiere || "—"}</td><td>${s.enseignant || "—"}</td><td>${s.salle || "—"}</td></tr>`
+            )
+            .join("")
+        : '<tr><td colspan="5">Aucun créneau pour ce semestre.</td></tr>';
+    }
+
+    semesterSelect.addEventListener("change", () => loadStudentSchedule(semesterSelect.value));
+    if (semesterSelect.options.length) loadStudentSchedule(semesterSelect.options[0].value);
 
     const adminDocs = await apiGet("/student/academic-programs");
     renderList("adminDocsList", "adminDocsCount", adminDocs.items, "Aucun document administratif pour le moment.", (item) => `

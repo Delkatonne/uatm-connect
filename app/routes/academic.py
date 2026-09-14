@@ -1,8 +1,14 @@
 from flask import Blueprint, jsonify, request
 
-from app.models import Program, ProgramOption, StudyYear, ClassGroup
+from app.models import Program, ProgramOption, StudyYear, ClassGroup, Center
 
 academic_bp = Blueprint("academic", __name__, url_prefix="/api/academic")
+
+
+@academic_bp.get("/centers")
+def list_centers():
+    centers = Center.query.filter_by(actif=True).order_by(Center.nom).all()
+    return jsonify({"items": [c.to_dict() for c in centers]})
 
 
 @academic_bp.get("/programs")

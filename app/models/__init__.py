@@ -6,10 +6,12 @@ from app.models.academic import (
     ClassGroup,
     TeachingUnit,
     Subject,
+    Center,
 )
 from app.models.schedule import Semester, TeacherAssignment, ScheduleSlot
 from app.models.profiles import Student, Teacher, VerificationDocument
 from app.models.grade import Grade, GradeTypeEnum
+from app.models.absence import Absence
 from app.models.content import (
     Document,
     Exam,
@@ -29,6 +31,7 @@ __all__ = [
     "ClassGroup",
     "TeachingUnit",
     "Subject",
+    "Center",
     "Semester",
     "TeacherAssignment",
     "ScheduleSlot",
@@ -37,6 +40,7 @@ __all__ = [
     "VerificationDocument",
     "Grade",
     "GradeTypeEnum",
+    "Absence",
     "Document",
     "Exam",
     "Notification",

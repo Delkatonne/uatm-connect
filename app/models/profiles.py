@@ -11,15 +11,18 @@ class Student(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, unique=True)
     annee_inscription = db.Column(db.String(9), nullable=False)  # ex: "2025-2026"
     classe_id = db.Column(db.String(36), db.ForeignKey("classes.id"), nullable=True)
+    centre_id = db.Column(db.String(36), db.ForeignKey("centers.id"), nullable=True)
 
     user = db.relationship("User", back_populates="student_profile")
     classe = db.relationship("ClassGroup", back_populates="students")
+    centre = db.relationship("Center")
 
     def to_dict(self):
         return {
             "id": self.id,
             "annee_inscription": self.annee_inscription,
             "classe": self.classe.to_dict() if self.classe else None,
+            "centre": self.centre.to_dict() if self.centre else None,
         }
 
 

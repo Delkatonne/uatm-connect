@@ -44,6 +44,17 @@ async function loadPrograms() {
   }
 }
 
+async function loadCenters() {
+  try {
+    const data = await apiGet("/academic/centers");
+    document.getElementById("centre").innerHTML =
+      '<option value="">Sélectionner…</option>' +
+      data.items.map((c) => `<option value="${c.id}">${c.nom}</option>`).join("");
+  } catch (err) {
+    showError("Impossible de charger la liste des centres.");
+  }
+}
+
 async function loadStudyYears() {
   try {
     const data = await apiGet("/academic/study-years");
@@ -137,6 +148,10 @@ form.addEventListener("submit", async (event) => {
     showError("Les mots de passe ne correspondent pas.");
     return;
   }
+  if (!document.getElementById("centre").value) {
+    showError("Merci de sélectionner votre centre.");
+    return;
+  }
   if (!classeSelect.value) {
     showError("Merci de sélectionner votre classe.");
     return;
@@ -152,6 +167,7 @@ form.addEventListener("submit", async (event) => {
   payload.append("telephone", document.getElementById("telephone").value.trim());
   payload.append("mot_de_passe", motDePasse);
   payload.append("confirmation_mot_de_passe", confirmation);
+  payload.append("centre_id", document.getElementById("centre").value);
   payload.append("classe_id", classeSelect.value);
   payload.append(
     "annee_inscription",
@@ -185,4 +201,5 @@ form.addEventListener("submit", async (event) => {
 });
 
 loadPrograms();
+loadCenters();
 loadStudyYears();

@@ -2,7 +2,7 @@ import click
 from flask.cli import with_appcontext
 
 from app.extensions import db
-from app.models import User, RoleEnum, AccountStatusEnum, Program, ProgramOption, StudyYear
+from app.models import User, RoleEnum, AccountStatusEnum, Program, ProgramOption, StudyYear, Center
 
 
 @click.command("create-admin")
@@ -123,6 +123,13 @@ def seed_academic():
                     ProgramOption(nom=opt_nom, code=opt_code, program_id=program.id)
                 )
                 click.echo(f"  Option créée : {opt_nom} ({opt_code})")
+
+    db.session.commit()
+
+    for centre_nom in ["Porto-Novo", "Calavi", "Akpakpa", "Gbégamey"]:
+        if not Center.query.filter_by(nom=centre_nom).first():
+            db.session.add(Center(nom=centre_nom))
+            click.echo(f"Centre créé : {centre_nom}")
 
     db.session.commit()
     click.echo("Seed académique terminé.")

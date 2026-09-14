@@ -18,6 +18,7 @@ from app.models import (
     AcademicProgram,
     Grade,
     GradeTypeEnum,
+    Absence,
 )
 from app.utils.decorators import account_must_be_valide, role_required
 
@@ -492,3 +493,92 @@ def submit_grades():
 
     db.session.commit()
     return jsonify({"items": [g.to_dict() for g in saved]}), 201
+
+
+# ---------- Absences ----------
+
+@teacher_bp.get("/absences")
+@role_required("enseignant")
+@account_must_be_valide
+def list_absences():
+    teacher = _current_teacher()
+    if not teacher:
+        return jsonify({"items": []})
+
+    classe_id = request.args.get("classe_id")
+    subject_id = request.args.get("subject_id")
+
+    query = Absence.query.filter_by(teacher_id=teacher.id)
+    if classe_id:
+        query = query.filter_by(classe_id=classe_id)
+    if subject_id:
+        query = query.filter_by(subject_id=subject_id)
+
+    items = query.order_by(Absence.date.desc()).all()
+    return jsonify({"items": [a.to_dict() for a in items]})
+
+
+@teacher_bp.post("/absences")
+@role_required("enseignant")
+@account_must_be_valide
+def submit_absences():
+    """
+    Saisie groupée des absences pour une classe/matière/date.
+    Corps attendu : { classe_id, subject_id, date, student_ids: [...] }
+    Seuls les étudiants listés dans student_ids sont marqués absents.
+    """
+    teacher = _current_teacher()
+    if not teacher:
+        return jsonify({"message": "Profil enseignant introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    required = ["classe_id", "subject_id", "date", "student_ids"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    if not _has_assignment(teacher.id, data["classe_id"], data["subject_id"]):
+        return (
+            jsonify({"message": "Vous n'êtes pas affecté à cette matière pour cette classe."}),
+            403,
+        )
+
+    try:
+        absence_date = datetime.strptime(data["date"], "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"message": "Date invalide (format attendu : AAAA-MM-JJ)."}), 400
+
+    saved = []
+    for student_id in data["student_ids"]:
+        existing = Absence.query.filter_by(
+            student_id=student_id, subject_id=data["subject_id"], date=absence_date
+        ).first()
+        if existing:
+            saved.append(existing)
+            continue
+
+        absence = Absence(
+            student_id=student_id,
+            subject_id=data["subject_id"],
+            classe_id=data["classe_id"],
+            teacher_id=teacher.id,
+            date=absence_date,
+        )
+        db.session.add(absence)
+        saved.append(absence)
+
+    db.session.flush()
+
+    subject_nom = saved[0].subject.nom if saved and saved[0].subject else "un cours"
+    for absence in saved:
+        if absence.student and absence.student.user_id:
+            db.session.add(
+                Notification(
+                    user_id=absence.student.user_id,
+                    titre="Absence enregistrée",
+                    message=f"Une absence a été enregistrée en {subject_nom} le {data['date']}.",
+                )
+            )
+
+    db.session.commit()
+    return jsonify({"items": [a.to_dict() for a in saved]}), 201

@@ -183,3 +183,16 @@ class Subject(db.Model):
             if self.teaching_unit and self.teaching_unit.study_year
             else None,
         }
+
+
+class Center(db.Model):
+    """Centre / campus (ex: Porto-Novo, Calavi, Akpakpa, Gbégamey)."""
+
+    __tablename__ = "centers"
+
+    id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    nom = db.Column(db.String(150), nullable=False, unique=True)
+    actif = db.Column(db.Boolean, default=True)
+
+    def to_dict(self):
+        return {"id": self.id, "nom": self.nom, "actif": self.actif}

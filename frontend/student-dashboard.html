@@ -24,6 +24,8 @@
       <a href="#cours" data-section="cours">Mes cours</a>
       <a href="#devoirs" data-section="devoirs">Mes devoirs</a>
       <a href="#examens" data-section="examens">Mes examens</a>
+      <a href="#emploi" data-section="emploi">Emploi du temps</a>
+      <a href="#absences" data-section="absences">Mes absences</a>
       <a href="#programme" data-section="programme">Mon programme</a>
       <a href="#notes" data-section="notes">Mes notes</a>
       <a href="#documents" data-section="documents">Documents</a>
@@ -59,6 +61,30 @@
         <span class="count" id="examensCount"></span>
       </div>
       <div id="examensList"></div>
+    </section>
+
+    <section class="section" id="emploi">
+      <div class="section-header">
+        <h3>Emploi du temps</h3>
+      </div>
+      <div class="field" style="max-width:320px; margin-bottom:16px;">
+        <label style="display:block; font-size:13px; margin-bottom:6px;">Semestre</label>
+        <select id="scheduleSemesterStudent" style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;"></select>
+      </div>
+      <table class="simple-table" id="scheduleTableStudent">
+        <thead><tr><th>Jour</th><th>Horaire</th><th>Matière</th><th>Enseignant</th><th>Salle</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="section" id="absences">
+      <div class="section-header">
+        <h3>Mes absences</h3>
+      </div>
+      <table class="simple-table" id="absencesTableStudent">
+        <thead><tr><th>Date</th><th>Matière</th><th>Statut</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </section>
 
     <section class="section" id="programme">

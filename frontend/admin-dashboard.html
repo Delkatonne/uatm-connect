@@ -29,6 +29,8 @@
       <a href="#" class="tab-link" data-tab="programs">Programmes &amp; documents</a>
       <a href="#" class="tab-link" data-tab="exams">Examens</a>
       <a href="#" class="tab-link" data-tab="messages">Messages</a>
+      <a href="#" class="tab-link" data-tab="absences">Absences</a>
+      <a href="#" class="tab-link" data-tab="stats">Statistiques</a>
     </nav>
     <div class="sidebar-footer">GASA Formation<br />Administration</div>
   </aside>
@@ -57,6 +59,16 @@
     <!-- Filières & classes -->
     <section class="tab-panel" id="tab-structure">
       <h1 class="admin-title">Filières, options, années &amp; classes</h1>
+
+      <div class="panel-header"><h3>Nouveau centre</h3></div>
+      <form class="inline-form" id="centerForm">
+        <div class="field"><label>Nom</label><input type="text" id="centerNom" placeholder="Ex : Porto-Novo" required /></div>
+        <button type="submit">Ajouter</button>
+      </form>
+      <table class="simple-table" id="centersTable">
+        <thead><tr><th>Nom</th><th>Statut</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
 
       <div class="panel-header"><h3>Nouvelle filière</h3></div>
       <form class="inline-form" id="programForm">
@@ -301,6 +313,37 @@
         </div>
         <button type="submit" style="align-self:flex-start; padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Envoyer</button>
       </form>
+    </section>
+
+    <!-- Absences -->
+    <section class="tab-panel" id="tab-absences">
+      <h1 class="admin-title">Absences</h1>
+      <div class="field" style="max-width:320px; margin-bottom:12px;">
+        <label>Filtrer par classe</label>
+        <select id="absenceFilterClasse" style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;">
+          <option value="">Toutes les classes</option>
+        </select>
+      </div>
+      <table class="simple-table" id="absencesAdminTable">
+        <thead><tr><th>Étudiant</th><th>Classe</th><th>Matière</th><th>Date</th><th>Statut</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Statistiques -->
+    <section class="tab-panel" id="tab-stats">
+      <h1 class="admin-title">Statistiques &amp; rapports</h1>
+
+      <div class="panel-header"><h3>Étudiants par filière</h3></div>
+      <div id="statsProgramBars" style="margin-bottom:28px;"></div>
+
+      <div class="panel-header"><h3>Étudiants par classe</h3></div>
+      <div id="statsClasseBars" style="margin-bottom:28px;"></div>
+
+      <div class="panel-header"><h3>Documents publiés par type</h3></div>
+      <div id="statsDocBars" style="margin-bottom:28px;"></div>
+
+      <div class="stat-grid" id="statsSummaryGrid"></div>
     </section>
 
   </main>

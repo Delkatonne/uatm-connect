@@ -156,6 +156,66 @@ document.getElementById("accountRoleFilter").addEventListener("click", (e) => {
   loadAccounts();
 });
 
+// ---------- Centres ----------
+
+async function loadCentersAdmin() {
+  const data = await get("/admin/centers");
+  document.querySelector("#centersTable tbody").innerHTML = data.items
+    .map(
+      (c) => `
+      <tr data-center-id="${c.id}">
+        <td>${c.nom}</td>
+        <td>${c.actif ? "Actif" : "Inactif"}</td>
+        <td>
+          <button class="btn-small" data-action="toggle-center">${c.actif ? "Désactiver" : "Activer"}</button>
+          <button class="btn-small refuse" data-action="delete-center">Supprimer</button>
+        </td>
+      </tr>`
+    )
+    .join("");
+
+  document.querySelectorAll('[data-action="toggle-center"]').forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      const isActif = row.children[1].textContent.trim() === "Actif";
+      try {
+        await api(`/admin/centers/${row.dataset.centerId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ actif: !isActif }),
+        });
+        loadCentersAdmin();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-center"]').forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      try {
+        await api(`/admin/centers/${row.dataset.centerId}`, { method: "DELETE" });
+        showToast("Centre supprimé.");
+        loadCentersAdmin();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+}
+
+document.getElementById("centerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await post("/admin/centers", { nom: document.getElementById("centerNom").value.trim() });
+    e.target.reset();
+    showToast("Centre ajouté.");
+    loadCentersAdmin();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
 // ---------- Filières, options, années, classes ----------
 
 async function loadPrograms() {
@@ -194,6 +254,10 @@ async function loadClassesAdmin() {
     .join("");
   fillSelect(document.getElementById("assignClass"), data.items, "id", (c) => c.nom, "Sélectionner…");
   fillSelect(document.getElementById("examAdminClasse"), data.items, "id", (c) => c.nom, "Sélectionner…");
+  const absenceFilter = document.getElementById("absenceFilterClasse");
+  absenceFilter.innerHTML =
+    '<option value="">Toutes les classes</option>' +
+    data.items.map((c) => `<option value="${c.id}">${c.nom}</option>`).join("");
   classesById = Object.fromEntries(data.items.map((c) => [c.id, c.nom]));
   return data.items;
 }
@@ -665,11 +729,104 @@ document.getElementById("messageForm").addEventListener("submit", async (e) => {
 
 renderSelectedBar();
 
+// ---------- Absences ----------
+
+async function loadAbsencesAdmin() {
+  const classeId = document.getElementById("absenceFilterClasse").value;
+  const data = await get(`/admin/absences${classeId ? `?classe_id=${classeId}` : ""}`);
+
+  document.querySelector("#absencesAdminTable tbody").innerHTML = data.items.length
+    ? data.items
+        .map(
+          (a) => `
+      <tr data-absence-id="${a.id}">
+        <td>${a.etudiant || "—"}</td>
+        <td>${a.classe || "—"}</td>
+        <td>${a.matiere || "—"}</td>
+        <td>${a.date}</td>
+        <td>${a.justifiee ? "Justifiée" : "Non justifiée"}</td>
+        <td>
+          <button class="btn-small" data-action="toggle-justif">${a.justifiee ? "Déjustifier" : "Justifier"}</button>
+          <button class="btn-small refuse" data-action="delete-absence">Supprimer</button>
+        </td>
+      </tr>`
+        )
+        .join("")
+    : '<tr><td colspan="6">Aucune absence enregistrée.</td></tr>';
+
+  document.querySelectorAll('[data-action="toggle-justif"]').forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      const isJustifiee = row.children[4].textContent.trim() === "Justifiée";
+      try {
+        await api(`/admin/absences/${row.dataset.absenceId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ justifiee: !isJustifiee }),
+        });
+        loadAbsencesAdmin();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-absence"]').forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("tr");
+      try {
+        await api(`/admin/absences/${row.dataset.absenceId}`, { method: "DELETE" });
+        showToast("Absence supprimée.");
+        loadAbsencesAdmin();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+}
+
+document.getElementById("absenceFilterClasse").addEventListener("change", loadAbsencesAdmin);
+
+// ---------- Statistiques ----------
+
+function renderBars(containerId, items) {
+  const container = document.getElementById(containerId);
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state">Aucune donnée pour le moment.</div>';
+    return;
+  }
+  const max = Math.max(...items.map((i) => i.count), 1);
+  container.innerHTML = items
+    .map(
+      (i) => `
+      <div class="stat-bar-row">
+        <span>${i.label || "—"}</span>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(i.count / max) * 100}%"></div></div>
+        <span>${i.count}</span>
+      </div>`
+    )
+    .join("");
+}
+
+async function loadReports() {
+  const data = await get("/admin/reports");
+  renderBars("statsProgramBars", data.students_by_program);
+  renderBars("statsClasseBars", data.students_by_classe);
+  renderBars("statsDocBars", data.documents_by_type);
+
+  document.getElementById("statsSummaryGrid").innerHTML = `
+    <div class="stat-card"><div class="value">${data.exams_upcoming}</div><div class="label">Examens à venir</div></div>
+    <div class="stat-card"><div class="value">${data.exams_past}</div><div class="label">Examens passés</div></div>
+    <div class="stat-card"><div class="value">${data.absences_total}</div><div class="label">Absences enregistrées</div></div>
+    <div class="stat-card"><div class="value">${data.absences_non_justifiees}</div><div class="label">Absences non justifiées</div></div>
+  `;
+}
+
 // ---------- Initialisation ----------
 
 async function init() {
   await loadStats();
   await loadAccounts();
+  await loadCentersAdmin();
   await loadPrograms();
   await loadOptionsAdmin();
   await loadStudyYearsAdmin();
@@ -682,6 +839,8 @@ async function init() {
   await loadSlots();
   await loadProgramsList();
   await loadExamsAdmin();
+  await loadAbsencesAdmin();
+  await loadReports();
 
   fillSelect(document.getElementById("progClasse"), classes, "id", (c) => c.nom, "Sélectionner…");
 }
