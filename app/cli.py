@@ -43,6 +43,31 @@ def register_cli(app):
     app.cli.add_command(create_admin)
     app.cli.add_command(seed_academic)
     app.cli.add_command(init_db)
+    app.cli.add_command(reset_classes)
+
+
+@click.command("reset-classes")
+@with_appcontext
+def reset_classes():
+    """
+    Supprime toutes les classes existantes (créées avant l'ajout du centre
+    obligatoire). Libère d'abord les étudiants qui y étaient rattachés.
+    À utiliser une seule fois, puis retirer de la Start Command.
+    """
+    from app.models import ClassGroup, Student
+
+    students = Student.query.filter(Student.classe_id.isnot(None)).all()
+    for s in students:
+        s.classe_id = None
+    db.session.commit()
+
+    classes = ClassGroup.query.all()
+    count = len(classes)
+    for c in classes:
+        db.session.delete(c)
+    db.session.commit()
+
+    click.echo(f"{count} classe(s) supprimée(s). {len(students)} étudiant(s) libéré(s) de leur classe.")
 
 
 @click.command("init-db")

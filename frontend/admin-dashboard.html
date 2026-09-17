@@ -106,13 +106,14 @@
 
       <div class="panel-header"><h3>Nouvelle classe</h3></div>
       <form class="inline-form" id="classForm">
+        <div class="field"><label>Centre</label><select id="classCentre" required></select></div>
         <div class="field"><label>Option</label><select id="classOption" required></select></div>
         <div class="field"><label>Année</label><select id="classStudyYear" required></select></div>
         <div class="field"><label>Nom</label><input type="text" id="classNom" placeholder="Ex : SIL 3" required /></div>
         <button type="submit">Ajouter</button>
       </form>
       <table class="simple-table" id="classesTable">
-        <thead><tr><th>Classe</th><th>Filière</th><th>Option</th><th>Année</th></tr></thead>
+        <thead><tr><th>Classe</th><th>Centre</th><th>Filière</th><th>Option</th><th>Année</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>

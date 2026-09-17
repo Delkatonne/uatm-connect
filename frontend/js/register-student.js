@@ -32,13 +32,10 @@ async function apiGet(path) {
 }
 
 async function loadPrograms() {
+  // Chargé une fois pour toutes ; le select filière n'est activé qu'après choix du centre.
   try {
     const data = await apiGet("/academic/programs");
-    filiereSelect.innerHTML =
-      '<option value="">Sélectionner…</option>' +
-      data.items
-        .map((p) => `<option value="${p.id}">${p.nom} — ${p.code}</option>`)
-        .join("");
+    filiereSelect.dataset.items = JSON.stringify(data.items);
   } catch (err) {
     showError("Impossible de charger la liste des filières.");
   }
@@ -63,6 +60,24 @@ async function loadStudyYears() {
     // silencieux : rechargé au moment où l'option est choisie
   }
 }
+
+document.getElementById("centre").addEventListener("change", () => {
+  resetSelect(optionSelect, "Choisir d'abord une filière");
+  resetSelect(anneeEtudeSelect, "Choisir d'abord une option");
+  resetSelect(classeSelect, "—");
+
+  const centreId = document.getElementById("centre").value;
+  if (!centreId) {
+    resetSelect(filiereSelect, "Choisir d'abord un centre");
+    return;
+  }
+
+  const programs = JSON.parse(filiereSelect.dataset.items || "[]");
+  filiereSelect.innerHTML =
+    '<option value="">Sélectionner…</option>' +
+    programs.map((p) => `<option value="${p.id}">${p.nom} — ${p.code}</option>`).join("");
+  filiereSelect.disabled = false;
+});
 
 filiereSelect.addEventListener("change", async () => {
   resetSelect(optionSelect, "Chargement…");
@@ -108,17 +123,18 @@ optionSelect.addEventListener("change", async () => {
 anneeEtudeSelect.addEventListener("change", async () => {
   resetSelect(classeSelect, "Chargement…");
 
-  if (!anneeEtudeSelect.value) {
+  const centreId = document.getElementById("centre").value;
+  if (!anneeEtudeSelect.value || !centreId) {
     resetSelect(classeSelect, "—");
     return;
   }
 
   try {
     const data = await apiGet(
-      `/academic/classes?option_id=${optionSelect.value}&study_year_id=${anneeEtudeSelect.value}`
+      `/academic/classes?centre_id=${centreId}&option_id=${optionSelect.value}&study_year_id=${anneeEtudeSelect.value}`
     );
     if (!data.items.length) {
-      classeSelect.innerHTML = '<option value="">Aucune classe disponible</option>';
+      classeSelect.innerHTML = '<option value="">Aucune classe disponible dans ce centre</option>';
       classeSelect.disabled = true;
       return;
     }

@@ -73,18 +73,20 @@ class StudyYear(db.Model):
 
 
 class ClassGroup(db.Model):
-    """Classe (ex: SIL 3) = option + année d'étude."""
+    """Classe (ex: SIL 3) = centre + option + année d'étude."""
 
     __tablename__ = "classes"
 
     id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
     nom = db.Column(db.String(100), nullable=False)
+    centre_id = db.Column(db.String(36), db.ForeignKey("centers.id"), nullable=False)
     option_id = db.Column(db.String(36), db.ForeignKey("options.id"), nullable=False)
     study_year_id = db.Column(
         db.String(36), db.ForeignKey("study_years.id"), nullable=False
     )
     actif = db.Column(db.Boolean, default=True)
 
+    centre = db.relationship("Center")
     option = db.relationship("ProgramOption", back_populates="classes")
     study_year = db.relationship("StudyYear")
     students = db.relationship("Student", back_populates="classe")
@@ -92,10 +94,19 @@ class ClassGroup(db.Model):
         "TeacherAssignment", back_populates="classe", cascade="all, delete-orphan"
     )
 
+    __table_args__ = (
+        db.UniqueConstraint(
+            "centre_id", "option_id", "study_year_id", "nom",
+            name="uq_class_per_centre_option_year",
+        ),
+    )
+
     def to_dict(self):
         return {
             "id": self.id,
             "nom": self.nom,
+            "centre_id": self.centre_id,
+            "centre": self.centre.nom if self.centre else None,
             "option_id": self.option_id,
             "study_year_id": self.study_year_id,
             "filiere": self.option.program.nom if self.option else None,

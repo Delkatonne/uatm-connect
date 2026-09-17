@@ -174,6 +174,8 @@ async function loadCentersAdmin() {
     )
     .join("");
 
+  fillSelect(document.getElementById("classCentre"), data.items, "id", (c) => c.nom, "Sélectionner…");
+
   document.querySelectorAll('[data-action="toggle-center"]').forEach((btn) => {
     btn.addEventListener("click", async () => {
       const row = btn.closest("tr");
@@ -250,7 +252,7 @@ async function loadStudyYearsAdmin() {
 async function loadClassesAdmin() {
   const data = await get("/admin/classes");
   document.querySelector("#classesTable tbody").innerHTML = data.items
-    .map((c) => `<tr><td>${c.nom}</td><td>${c.filiere || "—"}</td><td>${c.option || "—"}</td><td>${c.annee_etude || "—"}</td></tr>`)
+    .map((c) => `<tr><td>${c.nom}</td><td>${c.centre || "—"}</td><td>${c.filiere || "—"}</td><td>${c.option || "—"}</td><td>${c.annee_etude || "—"}</td></tr>`)
     .join("");
   fillSelect(document.getElementById("assignClass"), data.items, "id", (c) => c.nom, "Sélectionner…");
   fillSelect(document.getElementById("examAdminClasse"), data.items, "id", (c) => c.nom, "Sélectionner…");
@@ -314,6 +316,7 @@ document.getElementById("classForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
     await post("/admin/classes", {
+      centre_id: document.getElementById("classCentre").value,
       option_id: document.getElementById("classOption").value,
       study_year_id: document.getElementById("classStudyYear").value,
       nom: document.getElementById("classNom").value.trim(),

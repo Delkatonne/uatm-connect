@@ -121,6 +121,8 @@ def register_student():
     classe = ClassGroup.query.get(form["classe_id"])
     if not classe:
         return jsonify({"message": "Classe introuvable."}), 404
+    if classe.centre_id != centre.id:
+        return jsonify({"message": "Cette classe n'appartient pas au centre sélectionné."}), 400
 
     justificatif = request.files.get("justificatif")
     if not justificatif or justificatif.filename == "":

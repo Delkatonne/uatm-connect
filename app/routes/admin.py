@@ -282,9 +282,12 @@ def create_study_year():
 @role_required("admin")
 def admin_list_classes():
     option_id = request.args.get("option_id")
+    centre_id = request.args.get("centre_id")
     query = ClassGroup.query
     if option_id:
         query = query.filter_by(option_id=option_id)
+    if centre_id:
+        query = query.filter_by(centre_id=centre_id)
     items = query.all()
     return jsonify({"items": [c.to_dict() for c in items]})
 
@@ -293,11 +296,13 @@ def admin_list_classes():
 @role_required("admin")
 def create_class():
     data = request.get_json(silent=True) or {}
-    required = ["nom", "option_id", "study_year_id"]
+    required = ["nom", "centre_id", "option_id", "study_year_id"]
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
 
+    if not Center.query.get(data["centre_id"]):
+        return jsonify({"message": "Centre introuvable."}), 404
     if not ProgramOption.query.get(data["option_id"]):
         return jsonify({"message": "Option introuvable."}), 404
     if not StudyYear.query.get(data["study_year_id"]):
@@ -305,6 +310,7 @@ def create_class():
 
     classe = ClassGroup(
         nom=data["nom"],
+        centre_id=data["centre_id"],
         option_id=data["option_id"],
         study_year_id=data["study_year_id"],
     )

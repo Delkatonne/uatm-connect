@@ -41,10 +41,11 @@ def list_study_years():
 def list_classes():
     option_id = request.args.get("option_id")
     study_year_id = request.args.get("study_year_id")
-    if not option_id or not study_year_id:
-        return jsonify({"message": "option_id et study_year_id sont requis."}), 400
+    centre_id = request.args.get("centre_id")
+    if not option_id or not study_year_id or not centre_id:
+        return jsonify({"message": "centre_id, option_id et study_year_id sont requis."}), 400
 
     classes = ClassGroup.query.filter_by(
-        option_id=option_id, study_year_id=study_year_id, actif=True
+        centre_id=centre_id, option_id=option_id, study_year_id=study_year_id, actif=True
     ).all()
     return jsonify({"items": [c.to_dict() for c in classes]})
