@@ -156,6 +156,12 @@ def mark_notification_read(notif_id):
     notif.lu = True
     db.session.commit()
     return jsonify(notif.to_dict())
+
+
+@student_bp.get("/notifications")
+@role_required("etudiant")
+@account_must_be_valide
+def notifications():
     user_id = get_jwt_identity()
     items = (
         Notification.query.filter_by(user_id=user_id)
