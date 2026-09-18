@@ -38,15 +38,31 @@ function fillSelect(select, items, valueKey, labelFn, placeholder) {
 
 // ---------- Navigation par onglets ----------
 
+function activateTab(tabName) {
+  const link = document.querySelector(`.tab-link[data-tab="${tabName}"]`);
+  const panel = document.getElementById(`tab-${tabName}`);
+  if (!link || !panel) return false;
+
+  document.querySelectorAll(".tab-link").forEach((l) => l.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  link.classList.add("active");
+  panel.classList.add("active");
+  return true;
+}
+
 document.querySelectorAll(".tab-link").forEach((link) => {
   link.addEventListener("click", (e) => {
     e.preventDefault();
-    document.querySelectorAll(".tab-link").forEach((l) => l.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-    link.classList.add("active");
-    document.getElementById(`tab-${link.dataset.tab}`).classList.add("active");
+    activateTab(link.dataset.tab);
+    window.location.hash = link.dataset.tab;
   });
 });
+
+// Au chargement, ouvre l'onglet indiqué par l'URL (#notes, #exams...) s'il existe.
+const initialTab = window.location.hash.replace("#", "");
+if (initialTab) {
+  activateTab(initialTab);
+}
 
 // ---------- Vue d'ensemble ----------
 
