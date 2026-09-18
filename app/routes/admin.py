@@ -29,6 +29,7 @@ from app.models import (
     GradeTypeEnum,
     Center,
     Absence,
+    Document,
 )
 from app.models.schedule import JOURS_SEMAINE
 from app.utils.decorators import role_required
