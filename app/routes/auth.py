@@ -84,6 +84,9 @@ def change_password():
     db.session.commit()
 
     return jsonify({"message": "Mot de passe mis à jour."})
+
+
+@auth_bp.post("/register/student")
 def register_student():
     """
     Inscription étudiant (multipart/form-data) :
