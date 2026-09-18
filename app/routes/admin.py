@@ -965,17 +965,34 @@ def delete_exam_admin(exam_id):
 @admin_bp.get("/students/search")
 @role_required("admin")
 def search_students():
-    """Recherche d'étudiants par nom, avec filière/option/année affichées."""
+    """
+    Recherche d'étudiants : par nom (q), et/ou filtres centre_id, program_id
+    (filière), option_id. Renvoie les informations complètes de chaque étudiant.
+    """
     q = (request.args.get("q") or "").strip()
-    if len(q) < 2:
+    centre_id = request.args.get("centre_id")
+    program_id = request.args.get("program_id")
+    option_id = request.args.get("option_id")
+
+    if len(q) < 2 and not centre_id and not program_id and not option_id:
         return jsonify({"items": []})
 
-    students = (
-        Student.query.join(User)
-        .filter(User.nom_complet.ilike(f"%{q}%"), User.statut == AccountStatusEnum.VALIDE)
-        .limit(20)
-        .all()
-    )
+    query = Student.query.join(User).filter(User.statut == AccountStatusEnum.VALIDE)
+
+    if len(q) >= 2:
+        query = query.filter(User.nom_complet.ilike(f"%{q}%"))
+    if centre_id:
+        query = query.filter(Student.centre_id == centre_id)
+    if option_id or program_id:
+        query = query.join(ClassGroup, Student.classe_id == ClassGroup.id)
+        if option_id:
+            query = query.filter(ClassGroup.option_id == option_id)
+        if program_id:
+            query = query.join(
+                ProgramOption, ClassGroup.option_id == ProgramOption.id
+            ).filter(ProgramOption.program_id == program_id)
+
+    students = query.limit(50).all()
 
     items = []
     for s in students:
@@ -986,6 +1003,11 @@ def search_students():
                 "student_id": s.id,
                 "user_id": s.user_id,
                 "nom_complet": s.user.nom_complet,
+                "email": s.user.email,
+                "telephone": s.user.telephone,
+                "date_naissance": s.date_naissance.isoformat() if s.date_naissance else None,
+                "annee_inscription": s.annee_inscription,
+                "centre": s.centre.nom if s.centre else None,
                 "filiere": s.classe.option.program.nom if s.classe.option else None,
                 "option": s.classe.option.nom if s.classe.option else None,
                 "annee_etude": s.classe.study_year.nom if s.classe.study_year else None,

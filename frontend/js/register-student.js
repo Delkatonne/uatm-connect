@@ -179,6 +179,7 @@ form.addEventListener("submit", async (event) => {
 
   const payload = new FormData();
   payload.append("nom_complet", document.getElementById("nomComplet").value.trim());
+  payload.append("date_naissance", document.getElementById("dateNaissance").value);
   payload.append("email", document.getElementById("email").value.trim());
   payload.append("telephone", document.getElementById("telephone").value.trim());
   payload.append("mot_de_passe", motDePasse);

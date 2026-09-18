@@ -233,7 +233,7 @@ async function loadPrograms() {
 async function loadOptionsAdmin() {
   const data = await get("/admin/options");
   document.querySelector("#optionsTable tbody").innerHTML = data.items
-    .map((o) => `<tr><td>${o.program_id}</td><td>${o.nom}</td><td>${o.code}</td></tr>`)
+    .map((o) => `<tr><td>${o.filiere || "—"}</td><td>${o.nom}</td><td>${o.code}</td></tr>`)
     .join("");
   fillSelect(document.getElementById("classOption"), data.items, "id", (o) => `${o.nom} — ${o.code}`, "Sélectionner…");
   return data.items;
@@ -824,11 +824,99 @@ async function loadReports() {
   `;
 }
 
+// ---------- Recherche d'étudiants (fiche complète) ----------
+
+let allProgramsForSearch = [];
+
+async function loadStudentSearchFilters() {
+  const [centers, programs] = await Promise.all([get("/admin/centers"), get("/admin/programs")]);
+  fillSelect(document.getElementById("stuSearchCentre"), centers.items, "id", (c) => c.nom, "Tous");
+  fillSelect(document.getElementById("stuSearchProgram"), programs.items, "id", (p) => p.nom, "Toutes");
+  allProgramsForSearch = programs.items;
+}
+
+document.getElementById("stuSearchProgram").addEventListener("change", async (e) => {
+  const optionSelect = document.getElementById("stuSearchOption");
+  if (!e.target.value) {
+    optionSelect.innerHTML = '<option value="">Toutes</option>';
+    return;
+  }
+  const data = await get(`/admin/options?program_id=${e.target.value}`);
+  fillSelect(optionSelect, data.items, "id", (o) => o.nom, "Toutes");
+});
+
+function formatDateFr(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("fr-FR");
+}
+
+async function runAdvancedStudentSearch() {
+  const params = new URLSearchParams();
+  const name = document.getElementById("stuSearchName").value.trim();
+  const centre = document.getElementById("stuSearchCentre").value;
+  const program = document.getElementById("stuSearchProgram").value;
+  const option = document.getElementById("stuSearchOption").value;
+
+  if (name.length >= 2) params.set("q", name);
+  if (centre) params.set("centre_id", centre);
+  if (program) params.set("program_id", program);
+  if (option) params.set("option_id", option);
+
+  try {
+    const data = await get(`/admin/students/search?${params.toString()}`);
+    document.querySelector("#studentsResultsTable tbody").innerHTML = data.items.length
+      ? data.items
+          .map(
+            (s, i) => `
+        <tr data-index="${i}" style="cursor:pointer;">
+          <td>${s.nom_complet}</td>
+          <td>${s.centre || "—"}</td>
+          <td>${s.filiere || "—"}</td>
+          <td>${s.option || "—"}</td>
+          <td>${s.annee_etude || "—"}</td>
+          <td>${s.classe || "—"}</td>
+        </tr>`
+          )
+          .join("")
+      : '<tr><td colspan="6">Aucun étudiant trouvé.</td></tr>';
+
+    document.querySelectorAll("#studentsResultsTable tbody tr[data-index]").forEach((row) => {
+      row.addEventListener("click", () => {
+        showStudentDetail(data.items[parseInt(row.dataset.index, 10)]);
+      });
+    });
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function showStudentDetail(s) {
+  document.getElementById("studentDetailCard").style.display = "block";
+  document.getElementById("studentDetailName").textContent = s.nom_complet;
+  document.getElementById("studentDetailBody").innerHTML = `
+    <div>E-mail : <strong>${s.email || "—"}</strong></div>
+    <div>Téléphone : <strong>${s.telephone || "—"}</strong></div>
+    <div>Date de naissance : <strong>${formatDateFr(s.date_naissance)}</strong></div>
+    <div>Année d'inscription : <strong>${s.annee_inscription || "—"}</strong></div>
+    <div>Centre : <strong>${s.centre || "—"}</strong></div>
+    <div>Filière : <strong>${s.filiere || "—"}</strong></div>
+    <div>Option : <strong>${s.option || "—"}</strong></div>
+    <div>Année d'étude : <strong>${s.annee_etude || "—"}</strong></div>
+    <div>Classe : <strong>${s.classe || "—"}</strong></div>
+  `;
+}
+
+document.getElementById("stuSearchBtn").addEventListener("click", runAdvancedStudentSearch);
+document.getElementById("stuSearchName").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") runAdvancedStudentSearch();
+});
+
 // ---------- Initialisation ----------
 
 async function init() {
   await loadStats();
   await loadAccounts();
+  await loadStudentSearchFilters();
   await loadCentersAdmin();
   await loadPrograms();
   await loadOptionsAdmin();

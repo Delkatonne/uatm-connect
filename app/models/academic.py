@@ -55,6 +55,7 @@ class ProgramOption(db.Model):
             "nom": self.nom,
             "code": self.code,
             "program_id": self.program_id,
+            "filiere": self.program.nom if self.program else None,
             "actif": self.actif,
         }
 

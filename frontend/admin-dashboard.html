@@ -22,6 +22,7 @@
     <nav>
       <a href="#" class="tab-link active" data-tab="overview">Vue d'ensemble</a>
       <a href="#" class="tab-link" data-tab="accounts">Comptes en attente</a>
+      <a href="#" class="tab-link" data-tab="students">Étudiants</a>
       <a href="#" class="tab-link" data-tab="structure">Filières &amp; classes</a>
       <a href="#" class="tab-link" data-tab="ue">UE &amp; matières</a>
       <a href="#" class="tab-link" data-tab="assignments">Affectations</a>
@@ -54,6 +55,29 @@
         </div>
       </div>
       <div id="accountsList"></div>
+    </section>
+
+    <!-- Étudiants -->
+    <section class="tab-panel" id="tab-students">
+      <h1 class="admin-title">Rechercher des étudiants</h1>
+
+      <div class="inline-form" style="margin-bottom:12px;">
+        <div class="field"><label>Centre</label><select id="stuSearchCentre"><option value="">Tous</option></select></div>
+        <div class="field"><label>Filière</label><select id="stuSearchProgram"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Option</label><select id="stuSearchOption"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Nom</label><input type="text" id="stuSearchName" placeholder="Rechercher par nom…" /></div>
+        <button type="button" id="stuSearchBtn">Rechercher</button>
+      </div>
+
+      <table class="simple-table" id="studentsResultsTable">
+        <thead><tr><th>Nom</th><th>Centre</th><th>Filière</th><th>Option</th><th>Année</th><th>Classe</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="studentDetailCard" style="display:none; border:1px solid var(--slate-light); border-radius:var(--radius-m); padding:20px; margin-top:20px;">
+        <h3 style="font-family:var(--font-display); font-weight:500; margin:0 0 14px;" id="studentDetailName"></h3>
+        <div id="studentDetailBody" style="font-size:13.5px; line-height:2;"></div>
+      </div>
     </section>
 
     <!-- Filières & classes -->

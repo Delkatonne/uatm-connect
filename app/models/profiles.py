@@ -9,6 +9,7 @@ class Student(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, unique=True)
+    date_naissance = db.Column(db.Date, nullable=True)
     annee_inscription = db.Column(db.String(9), nullable=False)  # ex: "2025-2026"
     classe_id = db.Column(db.String(36), db.ForeignKey("classes.id"), nullable=True)
     centre_id = db.Column(db.String(36), db.ForeignKey("centers.id"), nullable=True)
@@ -20,6 +21,7 @@ class Student(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "date_naissance": self.date_naissance.isoformat() if self.date_naissance else None,
             "annee_inscription": self.annee_inscription,
             "classe": self.classe.to_dict() if self.classe else None,
             "centre": self.centre.to_dict() if self.centre else None,

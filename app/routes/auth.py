@@ -143,8 +143,16 @@ def register_student():
     db.session.add(user)
     db.session.flush()  # pour obtenir user.id avant le commit
 
+    date_naissance = None
+    if form.get("date_naissance"):
+        try:
+            date_naissance = datetime.strptime(form["date_naissance"], "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"message": "Date de naissance invalide (format attendu : AAAA-MM-JJ)."}), 400
+
     student = Student(
         user_id=user.id,
+        date_naissance=date_naissance,
         annee_inscription=form["annee_inscription"],
         classe_id=classe.id,
         centre_id=centre.id,
