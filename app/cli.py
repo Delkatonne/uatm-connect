@@ -44,6 +44,21 @@ def register_cli(app):
     app.cli.add_command(seed_academic)
     app.cli.add_command(init_db)
     app.cli.add_command(reset_classes)
+    app.cli.add_command(reset_db)
+
+
+@click.command("reset-db")
+@with_appcontext
+def reset_db():
+    """
+    Supprime TOUTES les tables et les recrée depuis les modèles actuels.
+    Efface toutes les données (étudiants, enseignants, classes, tout).
+    À utiliser une seule fois pour rattraper un schéma désynchronisé,
+    puis retirer de la Start Command.
+    """
+    db.drop_all()
+    db.create_all()
+    click.echo("Base de données réinitialisée : toutes les tables supprimées et recréées depuis les modèles actuels.")
 
 
 @click.command("reset-classes")
