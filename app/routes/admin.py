@@ -26,6 +26,7 @@ from app.models import (
     AcademicProgram,
     Exam,
     Grade,
+    GradeTypeEnum,
     Center,
     Absence,
 )
@@ -1232,3 +1233,97 @@ def reports():
             "absences_non_justifiees": absences_non_justifiees,
         }
     )
+
+
+# ---------- Notes envoyées par l'administration ----------
+
+@admin_bp.get("/classes/<classe_id>/students")
+@role_required("admin")
+def admin_class_students(classe_id):
+    classe = ClassGroup.query.get(classe_id)
+    if not classe:
+        return jsonify({"message": "Classe introuvable."}), 404
+
+    students = Student.query.filter_by(classe_id=classe_id).all()
+    return jsonify(
+        {
+            "items": [
+                {"student_id": s.id, "nom_complet": s.user.nom_complet}
+                for s in students
+                if s.user
+            ]
+        }
+    )
+
+
+@admin_bp.post("/grades")
+@role_required("admin")
+def submit_grades_admin():
+    """
+    Saisie/envoi groupé de notes par l'administration (ex : notes de
+    composition), pour une classe (résolue via centre + option + année),
+    une matière et un type d'évaluation.
+    Corps attendu :
+      { classe_id, subject_id, type, semester_id, entries: [{ student_id, valeur }, ...] }
+    """
+    data = request.get_json(silent=True) or {}
+    required = ["classe_id", "subject_id", "type", "entries"]
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"message": f"Champs manquants : {', '.join(missing)}"}), 400
+
+    valid_types = [t.value for t in GradeTypeEnum]
+    if data["type"] not in valid_types:
+        return jsonify({"message": f"Type invalide. Valeurs possibles : {', '.join(valid_types)}"}), 400
+
+    if not ClassGroup.query.get(data["classe_id"]):
+        return jsonify({"message": "Classe introuvable."}), 404
+    if not Subject.query.get(data["subject_id"]):
+        return jsonify({"message": "Matière introuvable."}), 404
+
+    saved = []
+    for entry in data["entries"]:
+        student_id = entry.get("student_id")
+        valeur = entry.get("valeur")
+        if student_id is None or valeur is None:
+            continue
+
+        grade = Grade.query.filter_by(
+            student_id=student_id,
+            subject_id=data["subject_id"],
+            type=data["type"],
+            semester_id=data.get("semester_id"),
+        ).first()
+
+        if grade:
+            grade.valeur = valeur
+        else:
+            grade = Grade(
+                student_id=student_id,
+                subject_id=data["subject_id"],
+                classe_id=data["classe_id"],
+                semester_id=data.get("semester_id"),
+                teacher_id=None,
+                type=data["type"],
+                valeur=valeur,
+                bareme=entry.get("bareme", 20),
+            )
+            db.session.add(grade)
+        saved.append(grade)
+
+    db.session.flush()
+
+    subject_nom = saved[0].subject.nom if saved and saved[0].subject else "une matière"
+    type_label = data["type"]
+    for grade in saved:
+        if grade.student and grade.student.user_id:
+            db.session.add(
+                Notification(
+                    user_id=grade.student.user_id,
+                    titre="Nouvelle note disponible",
+                    message=f"Votre note de {type_label} en {subject_nom} est disponible.",
+                )
+            )
+
+    db.session.commit()
+    return jsonify({"items": [g.to_dict() for g in saved]}), 201

@@ -23,6 +23,7 @@
       <a href="#" class="tab-link active" data-tab="overview">Vue d'ensemble</a>
       <a href="#" class="tab-link" data-tab="accounts">Comptes en attente</a>
       <a href="#" class="tab-link" data-tab="students">Étudiants</a>
+      <a href="#" class="tab-link" data-tab="grades">Notes</a>
       <a href="#" class="tab-link" data-tab="structure">Filières &amp; classes</a>
       <a href="#" class="tab-link" data-tab="ue">UE &amp; matières</a>
       <a href="#" class="tab-link" data-tab="assignments">Affectations</a>
@@ -78,6 +79,41 @@
         <h3 style="font-family:var(--font-display); font-weight:500; margin:0 0 14px;" id="studentDetailName"></h3>
         <div id="studentDetailBody" style="font-size:13.5px; line-height:2;"></div>
       </div>
+    </section>
+
+    <!-- Notes (envoi par l'administration) -->
+    <section class="tab-panel" id="tab-grades">
+      <h1 class="admin-title">Envoyer des notes de composition</h1>
+      <p class="entry-meta" style="margin-bottom:16px;">Sélectionnez le groupe d'étudiants par centre, filière, option et année — la classe correspondante est résolue automatiquement.</p>
+
+      <form class="inline-form" id="gradeGroupForm" style="margin-bottom:12px;">
+        <div class="field"><label>Centre</label><select id="gGradeCentre" required></select></div>
+        <div class="field"><label>Filière</label><select id="gGradeProgram" required></select></div>
+        <div class="field"><label>Option</label><select id="gGradeOption" required></select></div>
+        <div class="field"><label>Année</label><select id="gGradeStudyYear" required></select></div>
+        <button type="submit">Résoudre la classe</button>
+      </form>
+      <div id="gGradeClasseInfo" class="entry-meta" style="margin-bottom:16px;"></div>
+
+      <form class="inline-form" id="gradeDetailForm" style="margin-bottom:12px; display:none;">
+        <div class="field"><label>Matière</label><select id="gGradeSubject" required></select></div>
+        <div class="field">
+          <label>Type</label>
+          <select id="gGradeType" required>
+            <option value="session">Session (composition)</option>
+            <option value="rattrapage">Rattrapage</option>
+            <option value="interrogation">Interrogation</option>
+          </select>
+        </div>
+        <div class="field"><label>Semestre</label><select id="gGradeSemester"><option value="">Sans semestre</option></select></div>
+        <button type="submit">Charger les étudiants</button>
+      </form>
+
+      <table class="simple-table" id="gGradeEntryTable" style="display:none;">
+        <thead><tr><th>Étudiant</th><th>Note (/20)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button type="button" id="gGradeSaveBtn" style="display:none; padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Envoyer les notes</button>
     </section>
 
     <!-- Filières & classes -->

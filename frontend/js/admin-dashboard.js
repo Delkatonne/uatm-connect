@@ -348,6 +348,7 @@ async function loadSubjectsAdmin() {
     .join("");
   fillSelect(document.getElementById("assignSubject"), data.items, "id", (s) => `${s.nom} (${s.filiere} — ${s.annee_etude})`, "Sélectionner…");
   fillSelect(document.getElementById("examAdminSubject"), data.items, "id", (s) => `${s.nom} (${s.filiere} — ${s.annee_etude})`, "Sélectionner…");
+  allSubjectsCache = data.items;
   return data.items;
 }
 
@@ -393,6 +394,9 @@ async function loadSemesters() {
   fillSelect(document.getElementById("assignSemester"), data.items, "id", (s) => `${s.nom} — ${s.annee_academique}`, "Sélectionner…");
   fillSelect(document.getElementById("publishSemester"), data.items, "id", (s) => `${s.nom} — ${s.annee_academique}`, "Sélectionner…");
   fillSelect(document.getElementById("scheduleFileSemester"), data.items, "id", (s) => `${s.nom} — ${s.annee_academique}`, "Sélectionner…");
+  document.getElementById("gGradeSemester").innerHTML =
+    '<option value="">Sans semestre</option>' +
+    data.items.map((s) => `<option value="${s.id}">${s.nom} — ${s.annee_academique}</option>`).join("");
   return data.items;
 }
 
@@ -911,6 +915,127 @@ document.getElementById("stuSearchName").addEventListener("keydown", (e) => {
   if (e.key === "Enter") runAdvancedStudentSearch();
 });
 
+// ---------- Notes par groupe (centre/filière/option/année) ----------
+
+let resolvedGradeClasse = null;
+let allSubjectsCache = [];
+
+async function loadGradeGroupFilters() {
+  const [centers, programs, years] = await Promise.all([
+    get("/admin/centers"),
+    get("/admin/programs"),
+    get("/admin/study-years"),
+  ]);
+  fillSelect(document.getElementById("gGradeCentre"), centers.items, "id", (c) => c.nom, "Sélectionner…");
+  fillSelect(document.getElementById("gGradeProgram"), programs.items, "id", (p) => p.nom, "Sélectionner…");
+  fillSelect(document.getElementById("gGradeStudyYear"), years.items, "id", (y) => y.nom, "Sélectionner…");
+}
+
+document.getElementById("gGradeProgram").addEventListener("change", async (e) => {
+  const optionSelect = document.getElementById("gGradeOption");
+  if (!e.target.value) {
+    optionSelect.innerHTML = '<option value="">Sélectionner…</option>';
+    return;
+  }
+  const data = await get(`/admin/options?program_id=${e.target.value}`);
+  fillSelect(optionSelect, data.items, "id", (o) => o.nom, "Sélectionner…");
+});
+
+document.getElementById("gradeGroupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const centreId = document.getElementById("gGradeCentre").value;
+  const optionId = document.getElementById("gGradeOption").value;
+  const studyYearId = document.getElementById("gGradeStudyYear").value;
+
+  if (!centreId || !optionId || !studyYearId) {
+    showToast("Choisissez le centre, l'option et l'année.", true);
+    return;
+  }
+
+  try {
+    const data = await get(
+      `/academic/classes?centre_id=${centreId}&option_id=${optionId}&study_year_id=${studyYearId}`
+    );
+    if (!data.items.length) {
+      document.getElementById("gGradeClasseInfo").textContent =
+        "Aucune classe ne correspond à cette combinaison. Créez-la d'abord dans l'onglet \"Filières & classes\".";
+      document.getElementById("gradeDetailForm").style.display = "none";
+      resolvedGradeClasse = null;
+      return;
+    }
+
+    resolvedGradeClasse = data.items[0];
+    document.getElementById("gGradeClasseInfo").textContent =
+      `Classe résolue : ${resolvedGradeClasse.nom} (${resolvedGradeClasse.filiere} — ${resolvedGradeClasse.option} — ${resolvedGradeClasse.annee_etude})`;
+
+    const matchingSubjects = allSubjectsCache.filter(
+      (s) => s.filiere === resolvedGradeClasse.filiere && s.annee_etude === resolvedGradeClasse.annee_etude
+    );
+    fillSelect(document.getElementById("gGradeSubject"), matchingSubjects, "id", (s) => s.nom, "Sélectionner…");
+
+    document.getElementById("gradeDetailForm").style.display = "flex";
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+document.getElementById("gradeDetailForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!resolvedGradeClasse) return;
+
+  try {
+    const data = await get(`/admin/classes/${resolvedGradeClasse.id}/students`);
+    const table = document.getElementById("gGradeEntryTable");
+    const tbody = table.querySelector("tbody");
+
+    tbody.innerHTML = data.items.length
+      ? data.items
+          .map(
+            (s) => `
+        <tr data-student-id="${s.student_id}">
+          <td>${s.nom_complet}</td>
+          <td><input type="number" min="0" max="20" step="0.25" class="grade-input-admin" style="width:80px; padding:6px 8px; border:1px solid var(--slate-light); border-radius:3px;" /></td>
+        </tr>`
+          )
+          .join("")
+      : '<tr><td colspan="2">Aucun étudiant dans cette classe.</td></tr>';
+
+    table.style.display = "table";
+    document.getElementById("gGradeSaveBtn").style.display = "inline-block";
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+document.getElementById("gGradeSaveBtn").addEventListener("click", async () => {
+  const rows = document.querySelectorAll("#gGradeEntryTable tbody tr[data-student-id]");
+  const entries = [];
+  rows.forEach((row) => {
+    const input = row.querySelector(".grade-input-admin");
+    if (input && input.value !== "") {
+      entries.push({ student_id: row.dataset.studentId, valeur: parseFloat(input.value) });
+    }
+  });
+
+  if (!entries.length) {
+    showToast("Renseignez au moins une note.", true);
+    return;
+  }
+
+  try {
+    await post("/admin/grades", {
+      classe_id: resolvedGradeClasse.id,
+      subject_id: document.getElementById("gGradeSubject").value,
+      type: document.getElementById("gGradeType").value,
+      semester_id: document.getElementById("gGradeSemester").value || null,
+      entries,
+    });
+    showToast("Notes envoyées — les étudiants ont été notifiés.");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
 // ---------- Initialisation ----------
 
 async function init() {
@@ -924,6 +1049,7 @@ async function init() {
   const classes = await loadClassesAdmin();
   await loadUes();
   await loadSubjectsAdmin();
+  await loadGradeGroupFilters();
   await loadSemesters();
   await loadTeachersAdmin();
   await loadAssignments();
