@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Accueil — UATM Connect</title>
+<title>Documents administratifs — UATM Connect</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/tokens.css" />
@@ -20,7 +20,7 @@
       <span>UATM Connect</span>
     </div>
     <nav>
-      <a href="student-dashboard.html" class="active">Accueil</a>
+      <a href="student-dashboard.html">Accueil</a>
       <a href="student-cours.html">Mes cours</a>
       <a href="student-devoirs.html">Mes devoirs</a>
       <a href="student-examens.html">Mes examens</a>
@@ -28,7 +28,7 @@
       <a href="student-absences.html">Mes absences</a>
       <a href="student-programme.html">Mon programme</a>
       <a href="student-notes.html">Mes notes</a>
-      <a href="student-documents.html">Documents</a>
+      <a href="student-documents.html" class="active">Documents</a>
       <a href="student-notifications.html">Notifications</a>
       <a href="student-profil.html">Mon profil</a>
     </nav>
@@ -36,10 +36,11 @@
   </aside>
 
   <main class="main">
-    <h1 class="greeting" id="greeting">Bonjour</h1>
-    <div class="identity-line" id="identityLine"></div>
-
-    <div class="stat-grid" id="accueilStats"></div>
+    <div class="section-header">
+      <h3>Documents administratifs</h3>
+      <span class="count" id="adminDocsCount"></span>
+    </div>
+    <div id="adminDocsList"></div>
   </main>
 
 </div>
@@ -48,6 +49,6 @@
 
 <script src="js/config.js"></script>
 <script src="js/student-common.js"></script>
-<script src="js/student-dashboard.js"></script>
+<script src="js/student-documents.js"></script>
 </body>
 </html>
