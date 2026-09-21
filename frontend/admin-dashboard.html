@@ -77,7 +77,24 @@
 
       <div id="studentDetailCard" style="display:none; border:1px solid var(--slate-light); border-radius:var(--radius-m); padding:20px; margin-top:20px;">
         <h3 style="font-family:var(--font-display); font-weight:500; margin:0 0 14px;" id="studentDetailName"></h3>
-        <div id="studentDetailBody" style="font-size:13.5px; line-height:2;"></div>
+        <div id="studentDetailBody" style="font-size:13.5px; line-height:2; margin-bottom:20px;"></div>
+
+        <div class="panel-header"><h3>Modifier les informations</h3></div>
+        <p class="entry-meta" style="margin-bottom:12px;">À utiliser si l'étudiant n'a plus accès à son e-mail ou a besoin d'une correction — chaque modification exige votre mot de passe administrateur.</p>
+        <form id="studentEditForm" style="display:flex; flex-direction:column; gap:12px; max-width:480px; margin-bottom:20px;">
+          <div class="field"><label>Nom complet</label><input type="text" id="editNomComplet" style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label>E-mail</label><input type="email" id="editEmail" style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label>Téléphone</label><input type="tel" id="editTelephone" style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label>Votre mot de passe admin (confirmation)</label><input type="password" id="editAdminPassword" required style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <button type="submit" style="align-self:flex-start; padding:9px 18px; background:var(--navy); color:var(--paper); border:none; border-radius:3px;">Enregistrer les modifications</button>
+        </form>
+
+        <div class="panel-header"><h3>Réinitialiser le mot de passe</h3></div>
+        <form id="studentResetPasswordForm" style="display:flex; flex-direction:column; gap:12px; max-width:480px;">
+          <div class="field"><label>Nouveau mot de passe</label><input type="password" id="resetNewPassword" required style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <div class="field"><label>Votre mot de passe admin (confirmation)</label><input type="password" id="resetAdminPassword" required style="width:100%; padding:9px 11px; border:1px solid var(--slate-light); border-radius:3px;" /></div>
+          <button type="submit" style="align-self:flex-start; padding:9px 18px; background:var(--red); color:#fff; border:none; border-radius:3px;">Réinitialiser le mot de passe</button>
+        </form>
       </div>
     </section>
 

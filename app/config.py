@@ -31,6 +31,17 @@ class Config:
     # CORS
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
 
+    # URL du frontend (pour construire les liens envoyés par e-mail)
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5500")
+
+    # E-mail (réinitialisation de mot de passe)
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
+
     # Délai cible de validation d'un compte (informatif, utilisé pour les rapports)
     VALIDATION_DELAY_HOURS = 24
 

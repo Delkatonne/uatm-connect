@@ -12,6 +12,7 @@ from app.models.schedule import Semester, TeacherAssignment, ScheduleSlot
 from app.models.profiles import Student, Teacher, VerificationDocument
 from app.models.grade import Grade, GradeTypeEnum
 from app.models.absence import Absence
+from app.models.password_reset import PasswordResetToken
 from app.models.content import (
     Document,
     Exam,
@@ -41,6 +42,7 @@ __all__ = [
     "Grade",
     "GradeTypeEnum",
     "Absence",
+    "PasswordResetToken",
     "Document",
     "Exam",
     "Notification",

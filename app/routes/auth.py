@@ -1,11 +1,13 @@
 import os
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask_mail import Message
 from werkzeug.utils import secure_filename
 
-from app.extensions import db
+from app.extensions import db, mail
 from app.models import (
     User,
     RoleEnum,
@@ -16,6 +18,7 @@ from app.models import (
     ClassGroup,
     Program,
     Center,
+    PasswordResetToken,
 )
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -84,6 +87,79 @@ def change_password():
     db.session.commit()
 
     return jsonify({"message": "Mot de passe mis à jour."})
+
+
+@auth_bp.post("/forgot-password")
+def forgot_password():
+    """Envoie un lien de réinitialisation par e-mail si le compte existe."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    generic_message = "Si un compte existe avec cet e-mail, un lien de réinitialisation a été envoyé."
+
+    if not email:
+        return jsonify({"message": "E-mail requis."}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    # Toujours la même réponse, que le compte existe ou non (ne pas révéler
+    # quels e-mails sont enregistrés).
+    if user:
+        token = secrets.token_urlsafe(32)
+        reset = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+        )
+        db.session.add(reset)
+        db.session.commit()
+
+        reset_link = f"{current_app.config['FRONTEND_URL']}/reset-password.html?token={token}"
+
+        try:
+            msg = Message(
+                subject="Réinitialisation de votre mot de passe — UATM Connect",
+                recipients=[user.email],
+                body=(
+                    f"Bonjour {user.nom_complet},\n\n"
+                    "Vous avez demandé la réinitialisation de votre mot de passe sur UATM Connect.\n"
+                    f"Cliquez sur ce lien pour choisir un nouveau mot de passe (valable 1 heure) :\n{reset_link}\n\n"
+                    "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail — "
+                    "votre mot de passe actuel reste inchangé.\n\n"
+                    "Si vous n'avez plus accès à cette adresse e-mail, contactez le service "
+                    "informatique de l'administration pour faire modifier vos informations."
+                ),
+            )
+            mail.send(msg)
+        except Exception:
+            current_app.logger.exception("Échec de l'envoi de l'e-mail de réinitialisation.")
+
+    return jsonify({"message": generic_message})
+
+
+@auth_bp.post("/reset-password")
+def reset_password():
+    """Valide un token de réinitialisation et applique le nouveau mot de passe."""
+    data = request.get_json(silent=True) or {}
+    token = data.get("token")
+    nouveau_mot_de_passe = data.get("nouveau_mot_de_passe")
+    confirmation = data.get("confirmation")
+
+    if not token or not nouveau_mot_de_passe or not confirmation:
+        return jsonify({"message": "Champs manquants."}), 400
+
+    if nouveau_mot_de_passe != confirmation:
+        return jsonify({"message": "Les mots de passe ne correspondent pas."}), 400
+
+    reset = PasswordResetToken.query.filter_by(token=token, used=False).first()
+    if not reset or reset.expires_at < datetime.utcnow():
+        return jsonify({"message": "Ce lien est invalide ou a expiré."}), 400
+
+    reset.user.set_password(nouveau_mot_de_passe)
+    reset.used = True
+    db.session.commit()
+
+    return jsonify({"message": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter."})
 
 
 @auth_bp.post("/register/student")

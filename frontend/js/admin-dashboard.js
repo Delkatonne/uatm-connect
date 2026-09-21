@@ -910,7 +910,10 @@ async function runAdvancedStudentSearch() {
   }
 }
 
+let currentDetailStudent = null;
+
 function showStudentDetail(s) {
+  currentDetailStudent = s;
   document.getElementById("studentDetailCard").style.display = "block";
   document.getElementById("studentDetailName").textContent = s.nom_complet;
   document.getElementById("studentDetailBody").innerHTML = `
@@ -924,7 +927,55 @@ function showStudentDetail(s) {
     <div>Année d'étude : <strong>${s.annee_etude || "—"}</strong></div>
     <div>Classe : <strong>${s.classe || "—"}</strong></div>
   `;
+
+  document.getElementById("editNomComplet").value = s.nom_complet || "";
+  document.getElementById("editEmail").value = s.email || "";
+  document.getElementById("editTelephone").value = s.telephone || "";
+  document.getElementById("editAdminPassword").value = "";
+  document.getElementById("resetNewPassword").value = "";
+  document.getElementById("resetAdminPassword").value = "";
 }
+
+document.getElementById("studentEditForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!currentDetailStudent) return;
+
+  try {
+    await api(`/admin/users/${currentDetailStudent.user_id}/info`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        nom_complet: document.getElementById("editNomComplet").value.trim(),
+        email: document.getElementById("editEmail").value.trim(),
+        telephone: document.getElementById("editTelephone").value.trim(),
+        admin_password: document.getElementById("editAdminPassword").value,
+      }),
+    });
+    showToast("Informations mises à jour.");
+    document.getElementById("editAdminPassword").value = "";
+    runAdvancedStudentSearch();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
+
+document.getElementById("studentResetPasswordForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!currentDetailStudent) return;
+
+  try {
+    await api(`/admin/users/${currentDetailStudent.user_id}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify({
+        nouveau_mot_de_passe: document.getElementById("resetNewPassword").value,
+        admin_password: document.getElementById("resetAdminPassword").value,
+      }),
+    });
+    showToast("Mot de passe réinitialisé.");
+    e.target.reset();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+});
 
 document.getElementById("stuSearchBtn").addEventListener("click", runAdvancedStudentSearch);
 document.getElementById("stuSearchName").addEventListener("keydown", (e) => {

@@ -3,7 +3,7 @@ import os
 from flask import Flask
 
 from app.config import config_by_name
-from app.extensions import db, migrate, jwt, bcrypt, cors
+from app.extensions import db, migrate, jwt, bcrypt, cors, mail
 
 
 def create_app(env=None):
@@ -16,14 +16,17 @@ def create_app(env=None):
     jwt.init_app(app)
     bcrypt.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
+    mail.init_app(app)
 
     from app.routes.auth import auth_bp
     from app.routes.student import student_bp
+    from app.routes.teacher import teacher_bp
     from app.routes.academic import academic_bp
     from app.routes.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(student_bp)
+    app.register_blueprint(teacher_bp)
     app.register_blueprint(academic_bp)
     app.register_blueprint(admin_bp)
 

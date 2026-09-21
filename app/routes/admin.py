@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask_jwt_extended import get_jwt_identity
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
 
@@ -1328,3 +1329,92 @@ def submit_grades_admin():
 
     db.session.commit()
     return jsonify({"items": [g.to_dict() for g in saved]}), 201
+
+# ---------- Gestion manuelle d'un compte par l'administration ----------
+# (utilisé notamment quand un étudiant/enseignant n'a plus accès à son e-mail
+# et se rend au service informatique ; chaque modification exige le mot de
+# passe de l'admin en cours de session pour confirmation)
+
+def _verify_admin_password(admin_password):
+    """Retourne (admin_user, erreur_ou_None)."""
+    if not admin_password:
+        return None, ("Confirmez avec votre mot de passe administrateur.", 400)
+
+    admin_id = get_jwt_identity()
+    admin_user = User.query.get(admin_id)
+    if not admin_user or not admin_user.check_password(admin_password):
+        return None, ("Mot de passe administrateur incorrect.", 401)
+
+    return admin_user, None
+
+
+@admin_bp.patch("/users/<user_id>/info")
+@role_required("admin")
+def admin_update_user_info(user_id):
+    """Modifie le nom, l'e-mail ou le téléphone d'un compte étudiant/enseignant."""
+    data = request.get_json(silent=True) or {}
+    _, error = _verify_admin_password(data.get("admin_password"))
+    if error:
+        return jsonify({"message": error[0]}), error[1]
+
+    target = User.query.get(user_id)
+    if not target:
+        return jsonify({"message": "Compte introuvable."}), 404
+
+    if data.get("email"):
+        new_email = data["email"].strip().lower()
+        existing = User.query.filter(User.email == new_email, User.id != target.id).first()
+        if existing:
+            return jsonify({"message": "Cet e-mail est déjà utilisé par un autre compte."}), 409
+        target.email = new_email
+
+    if "telephone" in data:
+        target.telephone = data["telephone"]
+
+    if data.get("nom_complet"):
+        target.nom_complet = data["nom_complet"]
+
+    db.session.add(
+        Notification(
+            user_id=target.id,
+            titre="Informations mises à jour",
+            message="Vos informations de compte ont été modifiées par l'administration.",
+        )
+    )
+    db.session.commit()
+
+    return jsonify(target.to_dict())
+
+
+@admin_bp.post("/users/<user_id>/reset-password")
+@role_required("admin")
+def admin_reset_user_password(user_id):
+    """Réinitialise directement le mot de passe d'un compte (accès e-mail perdu)."""
+    data = request.get_json(silent=True) or {}
+    nouveau_mot_de_passe = data.get("nouveau_mot_de_passe")
+
+    if not nouveau_mot_de_passe:
+        return jsonify({"message": "Nouveau mot de passe requis."}), 400
+
+    _, error = _verify_admin_password(data.get("admin_password"))
+    if error:
+        return jsonify({"message": error[0]}), error[1]
+
+    target = User.query.get(user_id)
+    if not target:
+        return jsonify({"message": "Compte introuvable."}), 404
+
+    target.set_password(nouveau_mot_de_passe)
+    db.session.add(
+        Notification(
+            user_id=target.id,
+            titre="Mot de passe réinitialisé",
+            message=(
+                "Votre mot de passe a été réinitialisé par l'administration. "
+                "Si vous n'êtes pas à l'origine de cette demande, contactez le service informatique."
+            ),
+        )
+    )
+    db.session.commit()
+
+    return jsonify({"message": "Mot de passe réinitialisé."})
